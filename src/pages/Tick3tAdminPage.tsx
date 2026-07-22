@@ -42,7 +42,7 @@ export default function Tick3tAdminPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const isAdmin = await checkTick3tIsAdmin();
+    const isAdmin = await checkTick3tIsAdmin(user?.email);
     setAllowed(isAdmin);
     if (!isAdmin) {
       setDash(null);
@@ -58,7 +58,7 @@ export default function Tick3tAdminPage() {
     const rates: Record<string, string> = {};
     for (const o of list.organizers) rates[o.id] = String(o.commission_rate ?? 5);
     setCommissionById(rates);
-  }, [filter]);
+  }, [filter, user?.email]);
 
   useEffect(() => {
     if (authLoading) return;

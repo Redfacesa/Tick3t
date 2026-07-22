@@ -22,7 +22,7 @@ export default function Tick3tShell({ children }: { children?: ReactNode }) {
       setIsAdmin(false);
       return;
     }
-    void checkTick3tIsAdmin().then(setIsAdmin);
+    void checkTick3tIsAdmin(user.email).then(setIsAdmin);
   }, [user]);
 
   return (

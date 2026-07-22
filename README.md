@@ -58,10 +58,12 @@ Source assets in `/brand` (also served from `/public/tick3t` at runtime):
 - `wordmark.png` — Tick3t wordmark
 - `lockup.png` — full lockup with tagline
 
-## Admins
+## Platform co-owners (Tick3t admins)
 
-- `info@redfacepay.co.za` — platform + Tick3t admin
-- `3ntendr3@gmail.com` — Tick3t / Entendre ecosystem admin
+Tick3t is co-owned by **RedFace Pay** and **Entendre**. These emails are platform admins (hub `platform_ecosystem_apps.admin_emails` for `tick3t` + `entendre`, mirrored in `src/lib/tick3t/admins.ts`):
+
+- `info@redfacepay.co.za` — RedFace Pay
+- `3ntendr3@gmail.com` — Entendre
 
 ## Related
 

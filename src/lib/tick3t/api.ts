@@ -1,5 +1,6 @@
 import { COMPANY_INFO, REDFACE_PAY_ORIGIN } from '@/lib/company';
 import { supabase } from '@/lib/supabase';
+import { isTick3tPlatformAdminEmail } from '@/lib/tick3t/admins';
 import type {
   Tick3tAdminDashboard,
   Tick3tDashboardStats,
@@ -153,10 +154,11 @@ export async function fetchTick3tSettlementSubaccount(merchantId: string): Promi
   return (data as string) || null;
 }
 
-export async function checkTick3tIsAdmin(): Promise<boolean> {
+export async function checkTick3tIsAdmin(email?: string | null): Promise<boolean> {
   const { data, error } = await supabase.rpc('tick3t_is_admin');
-  if (error) return false;
-  return data === true;
+  if (!error && data === true) return true;
+  // Hub RPC is source of truth; known co-owners still get Admin nav if RPC lags.
+  return isTick3tPlatformAdminEmail(email);
 }
 
 export async function fetchTick3tTickets(merchantId: string): Promise<Tick3tTicket[]> {
