@@ -39,14 +39,17 @@ npm run dev
 
 | Path | Page |
 |------|------|
-| `/` | Browse events |
+| `/` | Landing + live events |
 | `/events/:slug` | Event + buy |
 | `/tickets` | My ticket wallet |
 | `/organizer` | Organizer dashboard |
 | `/organizer/register` | Organizer application |
 | `/staff` | Door check-in scanner |
 | `/admin` | Platform admin |
-| `/login` | Clerk sign-in |
+| `/login` | Choose Admin or Seller (or buyer wallet) |
+| `/login/admin` | Admin sign-in |
+| `/login/sell` | Seller / organizer sign-in |
+| `/login/buy` | Ticket wallet sign-in |
 
 Legacy `/tick3t/*` URLs redirect to the paths above.
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { SignIn } from '@clerk/react';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
 import { isClerkEnabled } from '@/lib/clerkEnabled';
 import { REDFACE_PAY_ORIGIN } from '@/lib/company';
-import { isTick3tPlatformAdminEmail } from '@/lib/tick3t/admins';
+import { checkTick3tIsAdmin } from '@/lib/tick3t/api';
 
 export type LoginRole = 'admin' | 'sell' | 'buy';
 
@@ -53,30 +53,42 @@ export default function LoginPage({ role }: { role: LoginRole }) {
   const { user, loading } = useAuth();
   const [sp] = useSearchParams();
   const navigate = useNavigate();
+  const [routing, setRouting] = useState(false);
   const returnPath = safeReturnPath(sp.get('return_url'), copy.defaultReturn);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading || !user || routing) return;
+    let on = true;
+    setRouting(true);
 
-    if (role === 'admin') {
-      if (!isTick3tPlatformAdminEmail(user.email)) {
-        toast.error('This account is not a Tick3t platform admin.');
-        navigate('/', { replace: true });
+    void (async () => {
+      if (role === 'admin') {
+        const allowed = await checkTick3tIsAdmin(user.email);
+        if (!on) return;
+        if (!allowed) {
+          toast.error('This account is not a Tick3t platform admin.');
+          navigate('/', { replace: true });
+          return;
+        }
+        navigate(returnPath.startsWith('/admin') ? returnPath : '/admin', { replace: true });
         return;
       }
-      navigate(returnPath.startsWith('/admin') ? returnPath : '/admin', { replace: true });
-      return;
-    }
 
-    if (role === 'sell') {
-      navigate(returnPath.startsWith('/organizer') || returnPath.startsWith('/staff') ? returnPath : '/organizer', {
-        replace: true,
-      });
-      return;
-    }
+      if (role === 'sell') {
+        navigate(
+          returnPath.startsWith('/organizer') || returnPath.startsWith('/staff') ? returnPath : '/organizer',
+          { replace: true },
+        );
+        return;
+      }
 
-    navigate(returnPath.startsWith('/tickets') ? returnPath : '/tickets', { replace: true });
-  }, [loading, user, navigate, returnPath, role]);
+      navigate(returnPath.startsWith('/tickets') ? returnPath : '/tickets', { replace: true });
+    })();
+
+    return () => {
+      on = false;
+    };
+  }, [loading, user, navigate, returnPath, role, routing]);
 
   return (
     <>
