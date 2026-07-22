@@ -116,8 +116,8 @@ export default function Tick3tAdminPage() {
       <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
         <h1 className="text-xl font-extrabold">Tick3t admin</h1>
         <Link
-          to={`/login?return_url=${encodeURIComponent(returnUrl)}`}
-          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold"
+          to={`/login/admin?return_url=${encodeURIComponent(returnUrl)}`}
+          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
         >
           Sign in
         </Link>
@@ -256,7 +256,7 @@ function ActionBtn({
       onClick={onClick}
       className={
         primary
-          ? 'min-h-[40px] rounded-lg bg-brand px-3 py-2 text-xs font-bold disabled:opacity-50'
+          ? 'min-h-[40px] rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white disabled:opacity-50'
           : 'min-h-[40px] rounded-lg border border-black/15 px-3 py-2 text-xs font-bold disabled:opacity-50'
       }
     >

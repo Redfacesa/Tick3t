@@ -91,8 +91,8 @@ export default function Tick3tStaffPage() {
         <h1 className="text-xl font-extrabold">Staff check-in</h1>
         <p className="mt-2 text-sm text-ink/55">Sign in to scan tickets at the door.</p>
         <Link
-          to={`/login?return_url=${encodeURIComponent(returnUrl)}`}
-          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold"
+          to={`/login/sell?return_url=${encodeURIComponent(returnUrl)}`}
+          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
         >
           Sign in
         </Link>
