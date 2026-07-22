@@ -1,8 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import ClerkSupabaseBridge, { type ClerkBridgeUser } from '@/components/ClerkSupabaseBridge';
-import { isClerkEnabled } from '@/lib/clerkEnabled';
 import { applyPaySsoTokensFromUrl } from '@/lib/sso';
-import { signOutViaClerk, supabase, usesThirdPartySupabaseAuth } from '@/lib/supabase';
+import { hasSupabaseConfig, supabase } from '@/lib/supabase';
 
 export type AuthUser = {
   id: string;
@@ -21,6 +19,7 @@ type AuthState = {
   merchant: AuthMerchant | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  configError: string | null;
 };
 
 const Ctx = createContext<AuthState>({
@@ -28,6 +27,7 @@ const Ctx = createContext<AuthState>({
   merchant: null,
   loading: true,
   signOut: async () => undefined,
+  configError: null,
 });
 
 export const useAuth = () => useContext(Ctx);
@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [merchant, setMerchant] = useState<AuthMerchant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [configError, setConfigError] = useState<string | null>(null);
 
   const applyUser = useCallback(async (next: AuthUser | null) => {
     setUser(next);
@@ -53,38 +54,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setMerchant(null);
       return;
     }
-    setMerchant(await resolveMerchant(next.email));
+    try {
+      setMerchant(await resolveMerchant(next.email));
+    } catch {
+      setMerchant(null);
+    }
   }, []);
 
   useEffect(() => {
     let on = true;
 
     void (async () => {
-      // Consume RedFace Pay ecosystem SSO tokens first (satellite return).
-      await applyPaySsoTokensFromUrl();
-      if (!on) return;
-
-      if (isClerkEnabled()) {
-        // Clerk bridge owns bootstrap loading state.
+      if (!hasSupabaseConfig) {
+        setConfigError(
+          'Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY on this deploy. Add the same hub keys as RedFace Pay in Vercel.',
+        );
+        setLoading(false);
         return;
       }
 
+      const sso = await applyPaySsoTokensFromUrl();
+      if (!on) return;
+
       const { data } = await supabase.auth.getSession();
       if (!on) return;
+
       const sessionUser = data.session?.user;
       if (sessionUser?.email) {
         await applyUser({ id: sessionUser.id, email: sessionUser.email });
+      } else if (sso?.email) {
+        await applyUser({ id: sso.userId, email: sso.email });
       } else {
         await applyUser(null);
       }
       setLoading(false);
     })();
-
-    if (isClerkEnabled()) {
-      return () => {
-        on = false;
-      };
-    }
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       void (async () => {
@@ -104,37 +108,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [applyUser]);
 
-  const onClerkSession = useCallback(
-    async (bridgeUser: ClerkBridgeUser) => {
-      if (!bridgeUser) {
-        await applyUser(null);
-        return;
-      }
-      await applyUser({
-        id: bridgeUser.id,
-        email: bridgeUser.email,
-        clerkUserId: bridgeUser.clerkUserId,
-      });
-    },
-    [applyUser],
-  );
-
   const signOut = useCallback(async () => {
-    if (usesThirdPartySupabaseAuth) {
-      await signOutViaClerk();
-    }
     await supabase.auth.signOut();
     await applyUser(null);
   }, [applyUser]);
 
   return (
-    <Ctx.Provider value={{ user, merchant, loading, signOut }}>
-      {isClerkEnabled() && (
-        <ClerkSupabaseBridge
-          onSession={onClerkSession}
-          onBootstrapComplete={() => setLoading(false)}
-        />
-      )}
+    <Ctx.Provider value={{ user, merchant, loading, signOut, configError }}>
       {children}
     </Ctx.Provider>
   );

@@ -14,6 +14,7 @@ const tree = (
   </StrictMode>
 );
 
+// Clerk is optional UI only — session identity comes from RedFace Pay SSO → Supabase.
 createRoot(root).render(
   isClerkEnabled() ? (
     <ClerkProvider

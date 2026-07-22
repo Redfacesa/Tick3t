@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { SignIn } from '@clerk/react';
 import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
-import { isClerkEnabled } from '@/lib/clerkEnabled';
 import { checkTick3tIsAdmin } from '@/lib/tick3t/api';
-import { absoluteTick3tReturnUrl, buildPayEcosystemLoginUrl } from '@/lib/sso';
+import { buildPayEcosystemLoginUrl, stripSsoParamsFromPath } from '@/lib/sso';
 
 export type LoginRole = 'admin' | 'sell' | 'buy';
 
@@ -37,10 +35,12 @@ const ROLE_COPY: Record<
 function safeReturnPath(raw: string | null, fallback: string): string {
   if (!raw) return fallback;
   try {
-    if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+    if (raw.startsWith('/') && !raw.startsWith('//')) {
+      return stripSsoParamsFromPath(raw);
+    }
     const u = new URL(raw);
     if (typeof window !== 'undefined' && u.origin === window.location.origin) {
-      return u.pathname + u.search + u.hash;
+      return stripSsoParamsFromPath(`${u.pathname}${u.search}${u.hash}`);
     }
   } catch {
     /* ignore */
@@ -48,31 +48,24 @@ function safeReturnPath(raw: string | null, fallback: string): string {
   return fallback;
 }
 
+function roleHome(role: LoginRole, returnPath: string): string {
+  if (role === 'admin') return returnPath.startsWith('/admin') ? returnPath : '/admin';
+  if (role === 'sell') {
+    return returnPath.startsWith('/organizer') || returnPath.startsWith('/staff') ? returnPath : '/organizer';
+  }
+  return returnPath.startsWith('/tickets') ? returnPath : '/tickets';
+}
+
 export default function LoginPage({ role }: { role: LoginRole }) {
   const copy = ROLE_COPY[role];
-  const { user, loading } = useAuth();
+  const { user, loading, configError } = useAuth();
   const [sp] = useSearchParams();
   const navigate = useNavigate();
   const [routing, setRouting] = useState(false);
   const returnPath = safeReturnPath(sp.get('return_url'), copy.defaultReturn);
+  const dest = roleHome(role, returnPath);
 
-  const payLoginUrl = useMemo(() => {
-    const dest =
-      role === 'admin'
-        ? returnPath.startsWith('/admin')
-          ? returnPath
-          : '/admin'
-        : role === 'sell'
-          ? returnPath.startsWith('/organizer') || returnPath.startsWith('/staff')
-            ? returnPath
-            : '/organizer'
-          : returnPath.startsWith('/tickets')
-            ? returnPath
-            : '/tickets';
-    return buildPayEcosystemLoginUrl(dest);
-  }, [role, returnPath]);
-
-  const clerkRedirectUrl = useMemo(() => absoluteTick3tReturnUrl(returnPath), [returnPath]);
+  const payLoginUrl = useMemo(() => buildPayEcosystemLoginUrl(dest), [dest]);
 
   useEffect(() => {
     if (loading || !user || routing) return;
@@ -88,25 +81,14 @@ export default function LoginPage({ role }: { role: LoginRole }) {
           navigate('/', { replace: true });
           return;
         }
-        navigate(returnPath.startsWith('/admin') ? returnPath : '/admin', { replace: true });
-        return;
       }
-
-      if (role === 'sell') {
-        navigate(
-          returnPath.startsWith('/organizer') || returnPath.startsWith('/staff') ? returnPath : '/organizer',
-          { replace: true },
-        );
-        return;
-      }
-
-      navigate(returnPath.startsWith('/tickets') ? returnPath : '/tickets', { replace: true });
+      navigate(dest, { replace: true });
     })();
 
     return () => {
       on = false;
     };
-  }, [loading, user, navigate, returnPath, role, routing]);
+  }, [loading, user, navigate, dest, role, routing]);
 
   return (
     <>
@@ -120,36 +102,27 @@ export default function LoginPage({ role }: { role: LoginRole }) {
           <p className="mt-2 text-sm text-ink/55">{copy.description}</p>
         </header>
 
-        {/* Primary: RedFace Pay ecosystem SSO (approved absolute return_url). */}
-        <a
-          href={payLoginUrl}
-          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white"
-        >
-          Continue with RedFace Pay
-        </a>
-        <p className="text-center text-xs text-ink/45">
-          Sign in on RedFace Pay, then you return here automatically.
-        </p>
-
-        {isClerkEnabled() && (
-          <div className="w-full border-t border-black/10 pt-6">
-            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-ink/40">
-              Or use Clerk on this site
-            </p>
-            <SignIn
-              routing="hash"
-              forceRedirectUrl={clerkRedirectUrl}
-              signUpForceRedirectUrl={absoluteTick3tReturnUrl(
-                role === 'admin' ? '/admin' : role === 'sell' ? '/organizer' : '/tickets',
-              )}
-              appearance={{
-                elements: {
-                  rootBox: 'w-full',
-                  card: 'bg-white border border-black/10 shadow-none',
-                },
-              }}
-            />
+        {configError && (
+          <div className="w-full border border-amber-500/40 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950">
+            <p className="font-bold">Deploy config missing</p>
+            <p className="mt-1">{configError}</p>
           </div>
+        )}
+
+        {loading ? (
+          <p className="text-sm text-ink/45">Checking session…</p>
+        ) : (
+          <>
+            <a
+              href={payLoginUrl}
+              className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white"
+            >
+              Continue with RedFace Pay
+            </a>
+            <p className="text-center text-xs text-ink/45">
+              Sign in on RedFace Pay, then you return here automatically.
+            </p>
+          </>
         )}
 
         <div className="flex flex-col items-center gap-2 text-sm text-ink/45">
