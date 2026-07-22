@@ -4,45 +4,55 @@
 
 Tick3t is a **Ticketing Operating System**. RedFace Pay is the invisible payment engine underneath.
 
+## Stack
+
+- Vite 5 + React 18 + React Router 6 + Tailwind
+- Shared Supabase hub (same project as RedFace Pay)
+- Clerk auth (same app as Pay when configured)
+- Checkout deep-links to RedFace Pay `/pay`
+
 ## Product split
 
 | Product | Role |
 |---------|------|
-| **Tick3t** | Events, ticket types, checkout UX, QR tickets, door scan, organizer & admin ops |
+| **Tick3t** (this repo) | Events, ticket types, checkout UX, QR tickets, door scan, organizer & admin |
 | **RedFace Pay** | Merchant identity, KYC, Paystack subaccounts, payment sessions, settlements |
-| **Entendre** | First live client / vertical experience on the same ticket engine |
 
-Nobody needs to see Paystack. Settlements flow: Tick3t → RedFace Pay → payment partner → organizer bank.
+## Local development
 
-## Architecture
-
-```
-Tick3t App (/tick3t)
-        │
-────────▼────────
- Ticket Engine
- (tick3t_events, ticket types, merchant_event_tickets, scan log)
-────────▲────────
-        │
- RedFace Pay API + Supabase
-        │
-        ▼
- Settlement (organizer subaccount or platform ACCT_wdduxlx635w9vo2)
+```bash
+cp .env.example .env
+# Fill VITE_SUPABASE_* and VITE_CLERK_PUBLISHABLE_KEY (same values as RedFace Pay)
+npm install
+npm run dev
 ```
 
-## Where the code lives (v1)
+## Deploy (Vercel)
 
-Implementation ships inside the RedFace Pay monorepo so one database, one identity, and one Document Engine stay shared:
+1. Import this GitHub repo in Vercel.
+2. Framework preset: **Vite**. Output directory: `dist`.
+3. Set env vars from `.env.example`.
+4. Add `tick3t.online` / `www.tick3t.online` (and `*.vercel.app`) as Clerk allowed origins.
+5. `vercel.json` already rewrites all routes to `index.html` (SPA).
 
-- App routes: `https://www.redfacepay.co.za/tick3t`
-- Source: [Redfacesa/Redface-pay](https://github.com/Redfacesa/Redface-pay) → `src/pages/tick3t/`, `src/components/tick3t/`, `src/lib/tick3t/`
-- Migrations: `supabase/migrations/0316_tick3t_engine_foundation.sql`, `0323_tick3t_os_foundation.sql`
+## Routes
 
-This repository holds brand assets and product docs. A standalone Tick3t deploy can fork from Pay later without changing the engine contract.
+| Path | Page |
+|------|------|
+| `/` | Browse events |
+| `/events/:slug` | Event + buy |
+| `/tickets` | My ticket wallet |
+| `/organizer` | Organizer dashboard |
+| `/organizer/register` | Organizer application |
+| `/staff` | Door check-in scanner |
+| `/admin` | Platform admin |
+| `/login` | Clerk sign-in |
+
+Legacy `/tick3t/*` URLs redirect to the paths above.
 
 ## Brand
 
-See `/brand`:
+Source assets in `/brand` (also served from `/public/tick3t` at runtime):
 
 - `icon.png` — mark only
 - `wordmark.png` — Tick3t wordmark
@@ -53,13 +63,7 @@ See `/brand`:
 - `info@redfacepay.co.za` — platform + Tick3t admin
 - `3ntendr3@gmail.com` — Tick3t / Entendre ecosystem admin
 
-## Quick links
+## Related
 
-- Browse events: [/tick3t](https://www.redfacepay.co.za/tick3t)
-- Organizer register: [/tick3t/organizer/register](https://www.redfacepay.co.za/tick3t/organizer/register)
-- Product page: [/product/tick3t](https://www.redfacepay.co.za/product/tick3t)
-- Apps catalog: [/apps](https://www.redfacepay.co.za/apps)
-
-## Out of scope for v1
-
-Seat maps, Apple/Google Wallet, SMS/push campaigns, affiliates, offline scanner sync. Schema hooks exist where cheap; product ships later.
+- Payment engine / monorepo: [Redfacesa/Redface-pay](https://github.com/Redfacesa/Redface-pay)
+- Live Pay checkout: `https://www.redfacepay.co.za/pay`
