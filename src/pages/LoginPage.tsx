@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { SignIn } from '@clerk/react';
 import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
 import { isClerkEnabled } from '@/lib/clerkEnabled';
-import { REDFACE_PAY_ORIGIN } from '@/lib/company';
 import { checkTick3tIsAdmin } from '@/lib/tick3t/api';
+import { absoluteTick3tReturnUrl, buildPayEcosystemLoginUrl } from '@/lib/sso';
 
 export type LoginRole = 'admin' | 'sell' | 'buy';
 
@@ -56,6 +56,24 @@ export default function LoginPage({ role }: { role: LoginRole }) {
   const [routing, setRouting] = useState(false);
   const returnPath = safeReturnPath(sp.get('return_url'), copy.defaultReturn);
 
+  const payLoginUrl = useMemo(() => {
+    const dest =
+      role === 'admin'
+        ? returnPath.startsWith('/admin')
+          ? returnPath
+          : '/admin'
+        : role === 'sell'
+          ? returnPath.startsWith('/organizer') || returnPath.startsWith('/staff')
+            ? returnPath
+            : '/organizer'
+          : returnPath.startsWith('/tickets')
+            ? returnPath
+            : '/tickets';
+    return buildPayEcosystemLoginUrl(dest);
+  }, [role, returnPath]);
+
+  const clerkRedirectUrl = useMemo(() => absoluteTick3tReturnUrl(returnPath), [returnPath]);
+
   useEffect(() => {
     if (loading || !user || routing) return;
     let on = true;
@@ -102,31 +120,35 @@ export default function LoginPage({ role }: { role: LoginRole }) {
           <p className="mt-2 text-sm text-ink/55">{copy.description}</p>
         </header>
 
-        {isClerkEnabled() ? (
-          <SignIn
-            routing="hash"
-            forceRedirectUrl={returnPath}
-            signUpForceRedirectUrl={role === 'admin' ? '/admin' : role === 'sell' ? '/organizer' : '/tickets'}
-            appearance={{
-              elements: {
-                rootBox: 'w-full',
-                card: 'bg-white border border-black/10 shadow-none',
-              },
-            }}
-          />
-        ) : (
-          <div className="w-full border border-black/10 bg-mist p-6 text-center">
-            <p className="text-sm text-ink/55">
-              Clerk is not configured for this deploy. Sign in on RedFace Pay, then return here.
+        {/* Primary: RedFace Pay ecosystem SSO (approved absolute return_url). */}
+        <a
+          href={payLoginUrl}
+          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white"
+        >
+          Continue with RedFace Pay
+        </a>
+        <p className="text-center text-xs text-ink/45">
+          Sign in on RedFace Pay, then you return here automatically.
+        </p>
+
+        {isClerkEnabled() && (
+          <div className="w-full border-t border-black/10 pt-6">
+            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-ink/40">
+              Or use Clerk on this site
             </p>
-            <a
-              href={`${REDFACE_PAY_ORIGIN}/login?return_url=${encodeURIComponent(
-                typeof window !== 'undefined' ? window.location.origin + returnPath : returnPath,
-              )}&ecosystem_from=tick3t`}
-              className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
-            >
-              Continue on RedFace Pay
-            </a>
+            <SignIn
+              routing="hash"
+              forceRedirectUrl={clerkRedirectUrl}
+              signUpForceRedirectUrl={absoluteTick3tReturnUrl(
+                role === 'admin' ? '/admin' : role === 'sell' ? '/organizer' : '/tickets',
+              )}
+              appearance={{
+                elements: {
+                  rootBox: 'w-full',
+                  card: 'bg-white border border-black/10 shadow-none',
+                },
+              }}
+            />
           </div>
         )}
 

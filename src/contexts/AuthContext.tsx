@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import ClerkSupabaseBridge, { type ClerkBridgeUser } from '@/components/ClerkSupabaseBridge';
 import { isClerkEnabled } from '@/lib/clerkEnabled';
+import { applyPaySsoTokensFromUrl } from '@/lib/sso';
 import { signOutViaClerk, supabase, usesThirdPartySupabaseAuth } from '@/lib/supabase';
 
 export type AuthUser = {
@@ -56,10 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isClerkEnabled()) return;
-
     let on = true;
+
     void (async () => {
+      // Consume RedFace Pay ecosystem SSO tokens first (satellite return).
+      await applyPaySsoTokensFromUrl();
+      if (!on) return;
+
+      if (isClerkEnabled()) {
+        // Clerk bridge owns bootstrap loading state.
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       if (!on) return;
       const sessionUser = data.session?.user;
@@ -70,6 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     })();
+
+    if (isClerkEnabled()) {
+      return () => {
+        on = false;
+      };
+    }
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       void (async () => {
@@ -107,9 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     if (usesThirdPartySupabaseAuth) {
       await signOutViaClerk();
-    } else {
-      await supabase.auth.signOut();
     }
+    await supabase.auth.signOut();
     await applyUser(null);
   }, [applyUser]);
 

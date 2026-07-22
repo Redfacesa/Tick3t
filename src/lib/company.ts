@@ -2,7 +2,7 @@ import { TICK3T_PLATFORM_ADMIN_EMAILS } from '@/lib/tick3t/admins';
 
 /** Site + RedFace Pay origins for checkout and legal links. */
 export const SITE_URL = (
-  import.meta.env.VITE_SITE_URL || 'https://tick3t.online'
+  import.meta.env.VITE_SITE_URL || 'https://www.tick3t.online'
 ).replace(/\/$/, '');
 
 export const REDFACE_PAY_ORIGIN = (
