@@ -81,18 +81,18 @@ export default function Tick3tStaffPage() {
   );
 
   if (authLoading) {
-    return <p className="text-sm text-white/45">Loading…</p>;
+    return <p className="text-sm text-ink/45">Loading…</p>;
   }
 
   if (!user) {
     const returnUrl = typeof window !== 'undefined' ? window.location.href : '/staff';
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+      <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
         <h1 className="text-xl font-extrabold">Staff check-in</h1>
-        <p className="mt-2 text-sm text-white/55">Sign in to scan tickets at the door.</p>
+        <p className="mt-2 text-sm text-ink/55">Sign in to scan tickets at the door.</p>
         <Link
           to={`/login?return_url=${encodeURIComponent(returnUrl)}`}
-          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-[#FF4B4B] px-5 py-2 text-sm font-bold"
+          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold"
         >
           Sign in
         </Link>
@@ -106,26 +106,26 @@ export default function Tick3tStaffPage() {
       <div className="mx-auto max-w-lg space-y-5">
         <header>
           <h1 className="text-2xl font-extrabold">Door check-in</h1>
-          <p className="mt-1 text-sm text-white/55">Scan a Tick3t QR or enter the code manually.</p>
+          <p className="mt-1 text-sm text-ink/55">Scan a Tick3t QR or enter the code manually.</p>
         </header>
 
-        <div className="space-y-3 rounded-2xl border border-white/10 bg-[#111] p-4">
+        <div className="space-y-3 rounded-2xl border border-black/10 bg-mist p-4">
           <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-white/55">Merchant ID</span>
+            <span className="text-xs font-semibold text-ink/55">Merchant ID</span>
             <input
               value={merchantId}
               onChange={(e) => setMerchantId(e.target.value.trim())}
               placeholder="Merchant UUID"
-              className="w-full rounded-xl border border-white/12 bg-[#0a0a0a] px-3 py-2.5 font-mono text-xs outline-none focus:border-[#FF4B4B]/50"
+              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 font-mono text-xs outline-none focus:border-brand/50"
             />
           </label>
           {events.length > 0 && (
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-white/55">Event context</span>
+              <span className="text-xs font-semibold text-ink/55">Event context</span>
               <select
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
-                className="w-full rounded-xl border border-white/12 bg-[#0a0a0a] px-3 py-2.5 text-sm outline-none focus:border-[#FF4B4B]/50"
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand/50"
               >
                 {events.map((ev) => (
                   <option key={ev.id} value={ev.id}>
@@ -137,7 +137,7 @@ export default function Tick3tStaffPage() {
           )}
         </div>
 
-        <section className="rounded-2xl border border-white/10 bg-[#111] p-5">
+        <section className="rounded-2xl border border-black/10 bg-mist p-5">
           <Tick3tScanner onScan={handleScan} busy={scanBusy} />
           {feedback && (
             <div
@@ -156,7 +156,7 @@ export default function Tick3tStaffPage() {
                 )}
                 <div>
                   <p className="font-bold">{feedback.title}</p>
-                  {feedback.detail && <p className="mt-1 text-sm text-white/55">{feedback.detail}</p>}
+                  {feedback.detail && <p className="mt-1 text-sm text-ink/55">{feedback.detail}</p>}
                 </div>
               </div>
             </div>

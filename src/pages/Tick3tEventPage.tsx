@@ -55,14 +55,14 @@ export default function Tick3tEventPage() {
   };
 
   if (loading) {
-    return <p className="text-sm text-white/45">Loading event…</p>;
+    return <p className="text-sm text-ink/45">Loading event…</p>;
   }
 
   if (!event) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+      <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
         <p className="font-semibold">Event not found</p>
-        <Link to="/" className="mt-4 inline-block text-sm text-[#FF4B4B]">
+        <Link to="/" className="mt-4 inline-block text-sm text-brand">
           Back to events
         </Link>
       </div>
@@ -78,7 +78,7 @@ export default function Tick3tEventPage() {
         ogImage={event.hero_image_url || event.poster_image_url || undefined}
       />
       <div className="space-y-6">
-        <Link to="/" className="text-xs font-semibold text-white/45 hover:text-white/70">
+        <Link to="/" className="text-xs font-semibold text-ink/45 hover:text-ink/70">
           ← All events
         </Link>
 
@@ -92,11 +92,11 @@ export default function Tick3tEventPage() {
 
         <header className="space-y-2">
           <h1 className="text-2xl font-extrabold sm:text-3xl">{event.title}</h1>
-          <p className="text-sm text-white/55">
+          <p className="text-sm text-ink/55">
             {[event.venue, event.city].filter(Boolean).join(', ') || 'Venue TBA'}
           </p>
           {event.event_date && (
-            <p className="text-sm text-white/55">
+            <p className="text-sm text-ink/55">
               {new Date(event.event_date).toLocaleDateString(undefined, {
                 weekday: 'long',
                 day: 'numeric',
@@ -107,38 +107,38 @@ export default function Tick3tEventPage() {
             </p>
           )}
           {event.organizer_name && (
-            <p className="text-xs text-white/40">Presented by {event.organizer_name}</p>
+            <p className="text-xs text-ink/40">Presented by {event.organizer_name}</p>
           )}
         </header>
 
         {event.description && (
-          <section className="rounded-2xl border border-white/10 bg-[#111] p-5">
+          <section className="rounded-2xl border border-black/10 bg-mist p-5">
             <h2 className="text-sm font-bold">About</h2>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-white/70">{event.description}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-ink/70">{event.description}</p>
           </section>
         )}
 
         {event.lineup && (
-          <section className="rounded-2xl border border-white/10 bg-[#111] p-5">
+          <section className="rounded-2xl border border-black/10 bg-mist p-5">
             <h2 className="text-sm font-bold">Line-up</h2>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-white/70">{event.lineup}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-ink/70">{event.lineup}</p>
           </section>
         )}
 
         <section className="space-y-3">
           <h2 className="text-sm font-bold">Tickets</h2>
           {types.length === 0 ? (
-            <p className="text-sm text-white/45">No ticket types on sale yet.</p>
+            <p className="text-sm text-ink/45">No ticket types on sale yet.</p>
           ) : (
             types.map((tt) => (
               <div
                 key={tt.id}
-                className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#111] p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-mist p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-bold">{tt.name}</p>
-                  {tt.description && <p className="mt-1 text-xs text-white/45">{tt.description}</p>}
-                  <p className="mt-2 text-sm font-bold text-[#FF4B4B]">{fmtMoney(tt.price_zar)}</p>
+                  {tt.description && <p className="mt-1 text-xs text-ink/45">{tt.description}</p>}
+                  <p className="mt-2 text-sm font-bold text-brand">{fmtMoney(tt.price_zar)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="sr-only" htmlFor={`qty-${tt.id}`}>
@@ -156,14 +156,14 @@ export default function Tick3tEventPage() {
                         [tt.id]: Math.max(1, Number(e.target.value) || 1),
                       }))
                     }
-                    className="w-16 rounded-lg border border-white/12 bg-[#0a0a0a] px-2 py-2 text-center text-sm"
+                    className="w-16 rounded-lg border border-black/10 bg-white px-2 py-2 text-center text-sm"
                     disabled={tt.status === 'sold_out'}
                   />
                   <button
                     type="button"
                     onClick={() => buy(tt)}
                     disabled={tt.status === 'sold_out'}
-                    className="min-h-[44px] rounded-xl bg-[#FF4B4B] px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                    className="min-h-[44px] rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
                   >
                     {tt.status === 'sold_out' ? 'Sold out' : 'Buy'}
                   </button>
@@ -174,7 +174,7 @@ export default function Tick3tEventPage() {
         </section>
 
         {(event.terms || event.refund_policy || event.age_restriction) && (
-          <section className="space-y-2 text-xs text-white/40">
+          <section className="space-y-2 text-xs text-ink/40">
             {event.age_restriction && <p>Age: {event.age_restriction}</p>}
             {event.terms && <p>Terms: {event.terms}</p>}
             {event.refund_policy && <p>Refunds: {event.refund_policy}</p>}

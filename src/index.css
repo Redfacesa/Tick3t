@@ -3,8 +3,11 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --brand: #ff4b4b;
+  --ink: #0a0a0a;
+  --paper: #ffffff;
+  --mist: #f4f4f5;
 }
 
 html,
@@ -16,8 +19,8 @@ body,
 body {
   margin: 0;
   font-family: 'DM Sans', system-ui, sans-serif;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--paper);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -28,4 +31,68 @@ a {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+@keyframes tick3t-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tick3t-streak {
+  0% {
+    transform: translateX(-12%);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(8%);
+    opacity: 0.35;
+  }
+}
+
+@keyframes tick3t-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tick3t-rise {
+  animation: tick3t-rise 0.7s ease-out both;
+}
+
+.tick3t-rise-delay {
+  animation: tick3t-rise 0.75s ease-out 0.12s both;
+}
+
+.tick3t-rise-delay-2 {
+  animation: tick3t-rise 0.8s ease-out 0.24s both;
+}
+
+.tick3t-streak {
+  animation: tick3t-streak 4.5s ease-in-out infinite;
+}
+
+.tick3t-fade {
+  animation: tick3t-fade 0.9s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tick3t-rise,
+  .tick3t-rise-delay,
+  .tick3t-rise-delay-2,
+  .tick3t-streak,
+  .tick3t-fade {
+    animation: none;
+  }
 }

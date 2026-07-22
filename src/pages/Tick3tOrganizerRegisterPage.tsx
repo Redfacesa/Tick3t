@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { registerTick3tOrganizer } from '@/lib/tick3t/api';
 
 const inputClass =
-  'w-full rounded-xl border border-white/12 bg-[#0a0a0a] px-3 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#FF4B4B]/50';
+  'w-full rounded-xl border border-black/10 bg-white px-3 py-3 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-brand/50';
 
 export default function Tick3tOrganizerRegisterPage() {
   const { user, loading: authLoading } = useAuth();
@@ -53,7 +53,7 @@ export default function Tick3tOrganizerRegisterPage() {
   };
 
   if (authLoading) {
-    return <p className="text-sm text-white/45">Loading…</p>;
+    return <p className="text-sm text-ink/45">Loading…</p>;
   }
 
   if (!user) {
@@ -65,14 +65,14 @@ export default function Tick3tOrganizerRegisterPage() {
           description="Register to sell tickets on Tick3t."
           path="/organizer/register"
         />
-        <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+        <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
           <h1 className="text-xl font-extrabold">Become an organizer</h1>
-          <p className="mt-2 text-sm text-white/55">
+          <p className="mt-2 text-sm text-ink/55">
             Sign in to apply. Settlements go to your RedFace Pay merchant account after approval.
           </p>
           <Link
-            to={`/login?return_url=${encodeURIComponent(returnUrl)}`}
-            className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-[#FF4B4B] px-5 py-2 text-sm font-bold text-white"
+            to={`/login/sell?return_url=${encodeURIComponent(returnUrl)}`}
+            className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
           >
             Sign in to continue
           </Link>
@@ -91,12 +91,12 @@ export default function Tick3tOrganizerRegisterPage() {
       <div className="mx-auto max-w-xl space-y-6">
         <header>
           <h1 className="text-2xl font-extrabold">Organizer registration</h1>
-          <p className="mt-1 text-sm text-white/55">
+          <p className="mt-1 text-sm text-ink/55">
             Tell us about your company and payout bank. Approval unlocks event creation and ticket sales.
           </p>
         </header>
 
-        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-white/10 bg-[#111] p-5">
+        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-black/10 bg-mist p-5">
           <Field label="Company name" required>
             <input
               className={inputClass}
@@ -139,7 +139,7 @@ export default function Tick3tOrganizerRegisterPage() {
             />
           </Field>
 
-          <p className="pt-2 text-xs font-bold uppercase tracking-widest text-white/40">Payout bank</p>
+          <p className="pt-2 text-xs font-bold uppercase tracking-widest text-ink/40">Payout bank</p>
           <Field label="Bank name">
             <input className={inputClass} value={form.bank_name} onChange={(e) => set('bank_name', e.target.value)} />
           </Field>
@@ -164,7 +164,7 @@ export default function Tick3tOrganizerRegisterPage() {
           <button
             type="submit"
             disabled={busy}
-            className="min-h-[44px] w-full rounded-xl bg-[#FF4B4B] py-3 text-sm font-bold text-white disabled:opacity-50"
+            className="min-h-[44px] w-full rounded-xl bg-brand py-3 text-sm font-bold text-white disabled:opacity-50"
           >
             {busy ? 'Submitting…' : 'Submit application'}
           </button>
@@ -185,7 +185,7 @@ function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-semibold text-white/55">
+      <span className="text-xs font-semibold text-ink/55">
         {label}
         {required ? ' *' : ''}
       </span>

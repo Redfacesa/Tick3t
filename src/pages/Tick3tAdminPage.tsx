@@ -107,17 +107,17 @@ export default function Tick3tAdminPage() {
   };
 
   if (authLoading || loading) {
-    return <p className="text-sm text-white/45">Loading admin…</p>;
+    return <p className="text-sm text-ink/45">Loading admin…</p>;
   }
 
   if (!user) {
     const returnUrl = typeof window !== 'undefined' ? window.location.href : '/admin';
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+      <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
         <h1 className="text-xl font-extrabold">Tick3t admin</h1>
         <Link
           to={`/login?return_url=${encodeURIComponent(returnUrl)}`}
-          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-[#FF4B4B] px-5 py-2 text-sm font-bold"
+          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold"
         >
           Sign in
         </Link>
@@ -127,10 +127,10 @@ export default function Tick3tAdminPage() {
 
   if (!allowed) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+      <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
         <h1 className="text-xl font-extrabold">Not authorized</h1>
-        <p className="mt-2 text-sm text-white/55">Tick3t admin access is required.</p>
-        <Link to="/" className="mt-4 inline-block text-sm text-[#FF4B4B]">
+        <p className="mt-2 text-sm text-ink/55">Tick3t admin access is required.</p>
+        <Link to="/" className="mt-4 inline-block text-sm text-brand">
           Back to events
         </Link>
       </div>
@@ -148,7 +148,7 @@ export default function Tick3tAdminPage() {
       <div className="space-y-6">
         <header>
           <h1 className="text-2xl font-extrabold">Tick3t admin</h1>
-          <p className="mt-1 text-sm text-white/55">Approve organizers, set commission, and track platform sales.</p>
+          <p className="mt-1 text-sm text-ink/55">Approve organizers, set commission, and track platform sales.</p>
         </header>
 
         {dash && (
@@ -161,8 +161,8 @@ export default function Tick3tAdminPage() {
               { label: 'Revenue', value: fmtMoney(dash.revenue_zar) },
               { label: 'Checked in today', value: dash.checked_in_today },
             ].map((s) => (
-              <div key={s.label} className="rounded-2xl border border-white/10 bg-[#111] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{s.label}</p>
+              <div key={s.label} className="rounded-2xl border border-black/10 bg-mist p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">{s.label}</p>
                 <p className="mt-2 text-xl font-extrabold">{s.value}</p>
               </div>
             ))}
@@ -175,7 +175,7 @@ export default function Tick3tAdminPage() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as Tick3tOrganizerStatus | '')}
-              className="rounded-xl border border-white/12 bg-[#111] px-3 py-2 text-xs outline-none"
+              className="rounded-xl border border-black/10 bg-mist px-3 py-2 text-xs outline-none"
             >
               <option value="">All</option>
               <option value="pending">Pending</option>
@@ -187,23 +187,23 @@ export default function Tick3tAdminPage() {
           </div>
 
           {organizers.length === 0 ? (
-            <p className="text-sm text-white/45">No organizers in this filter.</p>
+            <p className="text-sm text-ink/45">No organizers in this filter.</p>
           ) : (
             <ul className="space-y-3">
               {organizers.map((o) => (
-                <li key={o.id} className="rounded-2xl border border-white/10 bg-[#111] p-4">
+                <li key={o.id} className="rounded-2xl border border-black/10 bg-mist p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">{o.company_name}</p>
-                      <p className="text-xs text-white/45">
+                      <p className="text-xs text-ink/45">
                         {o.contact_name} · {o.email}
                       </p>
-                      <p className="mt-1 text-xs text-white/40">
+                      <p className="mt-1 text-xs text-ink/40">
                         {organizerStatusLabel(o.status)}
                         {o.phone ? ` · ${o.phone}` : ''}
                       </p>
                     </div>
-                    <label className="flex items-center gap-2 text-xs text-white/55">
+                    <label className="flex items-center gap-2 text-xs text-ink/55">
                       Commission %
                       <input
                         type="number"
@@ -214,7 +214,7 @@ export default function Tick3tAdminPage() {
                         onChange={(e) =>
                           setCommissionById((prev) => ({ ...prev, [o.id]: e.target.value }))
                         }
-                        className="w-16 rounded-lg border border-white/12 bg-[#0a0a0a] px-2 py-1.5 text-center"
+                        className="w-16 rounded-lg border border-black/10 bg-white px-2 py-1.5 text-center"
                       />
                     </label>
                   </div>
@@ -256,8 +256,8 @@ function ActionBtn({
       onClick={onClick}
       className={
         primary
-          ? 'min-h-[40px] rounded-lg bg-[#FF4B4B] px-3 py-2 text-xs font-bold disabled:opacity-50'
-          : 'min-h-[40px] rounded-lg border border-white/15 px-3 py-2 text-xs font-bold disabled:opacity-50'
+          ? 'min-h-[40px] rounded-lg bg-brand px-3 py-2 text-xs font-bold disabled:opacity-50'
+          : 'min-h-[40px] rounded-lg border border-black/15 px-3 py-2 text-xs font-bold disabled:opacity-50'
       }
     >
       {label}

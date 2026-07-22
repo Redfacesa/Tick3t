@@ -17,7 +17,7 @@ import {
 import type { Tick3tEvent, Tick3tOrganizer, Tick3tTicket } from '@/lib/tick3t/types';
 
 const inputClass =
-  'w-full rounded-xl border border-white/12 bg-[#0a0a0a] px-3 py-2.5 text-sm text-white outline-none focus:border-[#FF4B4B]/50';
+  'w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50';
 
 export default function Tick3tOrganizerDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -183,18 +183,18 @@ export default function Tick3tOrganizerDashboard() {
   };
 
   if (authLoading || loading) {
-    return <p className="text-sm text-white/45">Loading organizer…</p>;
+    return <p className="text-sm text-ink/45">Loading organizer…</p>;
   }
 
   if (!user) {
     const returnUrl = typeof window !== 'undefined' ? window.location.href : '/organizer';
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+      <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
         <h1 className="text-xl font-extrabold">Organizer dashboard</h1>
-        <p className="mt-2 text-sm text-white/55">Sign in to manage your events.</p>
+        <p className="mt-2 text-sm text-ink/55">Sign in to manage your events.</p>
         <Link
-          to={`/login?return_url=${encodeURIComponent(returnUrl)}`}
-          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-[#FF4B4B] px-5 py-2 text-sm font-bold"
+          to={`/login/sell?return_url=${encodeURIComponent(returnUrl)}`}
+          className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
         >
           Sign in
         </Link>
@@ -206,12 +206,12 @@ export default function Tick3tOrganizerDashboard() {
     return (
       <>
         <PageSeo title="Organizer" description="Tick3t organizer dashboard." path="/organizer" />
-        <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center">
+        <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
           <h1 className="text-xl font-extrabold">Start selling tickets</h1>
-          <p className="mt-2 text-sm text-white/55">Register as an organizer to create events on Tick3t.</p>
+          <p className="mt-2 text-sm text-ink/55">Register as an organizer to create events on Tick3t.</p>
           <Link
             to="/organizer/register"
-            className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-[#FF4B4B] px-5 py-2 text-sm font-bold"
+            className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
           >
             Register
           </Link>
@@ -238,26 +238,26 @@ export default function Tick3tOrganizerDashboard() {
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold">{organizer.company_name}</h1>
-            <p className="mt-1 text-sm text-white/55">{organizerStatusLabel(organizer.status)}</p>
+            <p className="mt-1 text-sm text-ink/55">{organizerStatusLabel(organizer.status)}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/organizer" className="rounded-lg px-3 py-2 text-xs font-semibold text-white/55 hover:text-white">
+            <Link to="/organizer" className="rounded-lg px-3 py-2 text-xs font-semibold text-ink/55 hover:text-ink">
               Overview
             </Link>
             <Link
               to="/organizer/events"
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-white/55 hover:text-white"
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-ink/55 hover:text-ink"
             >
               Events
             </Link>
-            <Link to="/staff" className="rounded-lg px-3 py-2 text-xs font-semibold text-[#FF4B4B]">
+            <Link to="/staff" className="rounded-lg px-3 py-2 text-xs font-semibold text-brand">
               Door scan
             </Link>
           </div>
         </header>
 
         {statusBanner && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950">
             {statusBanner}
           </div>
         )}
@@ -272,29 +272,29 @@ export default function Tick3tOrganizerDashboard() {
                   { label: 'Valid', value: String(stats?.valid ?? 0) },
                   { label: 'Checked in', value: String(stats?.checked_in ?? 0) },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-2xl border border-white/10 bg-[#111] p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{s.label}</p>
+                  <div key={s.label} className="rounded-2xl border border-black/10 bg-mist p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">{s.label}</p>
                     <p className="mt-2 text-xl font-extrabold">{s.value}</p>
                   </div>
                 ))}
               </section>
             )}
 
-            <section className="rounded-2xl border border-white/10 bg-[#111] p-5">
+            <section className="rounded-2xl border border-black/10 bg-mist p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-bold">Reports</h2>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={printReport}
-                    className="min-h-[40px] rounded-lg border border-white/15 px-3 py-2 text-xs font-bold"
+                    className="min-h-[40px] rounded-lg border border-black/15 px-3 py-2 text-xs font-bold"
                   >
                     Print
                   </button>
                   <button
                     type="button"
                     onClick={exportCsv}
-                    className="min-h-[40px] rounded-lg bg-[#FF4B4B] px-3 py-2 text-xs font-bold text-white"
+                    className="min-h-[40px] rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white"
                   >
                     Export CSV
                   </button>
@@ -305,25 +305,25 @@ export default function Tick3tOrganizerDashboard() {
             <section className="space-y-3">
               <h2 className="text-sm font-bold">Your events</h2>
               {events.length === 0 ? (
-                <p className="text-sm text-white/45">No events yet. Create one below.</p>
+                <p className="text-sm text-ink/45">No events yet. Create one below.</p>
               ) : (
                 <ul className="space-y-2">
                   {events.map((ev) => (
-                    <li key={ev.id} className="rounded-xl border border-white/10 bg-[#111] px-4 py-3">
+                    <li key={ev.id} className="rounded-xl border border-black/10 bg-mist px-4 py-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-bold">{ev.title}</p>
-                          <p className="text-xs text-white/45">
+                          <p className="text-xs text-ink/45">
                             /{ev.slug}
                             {ev.event_date ? ` · ${ev.event_date}` : ''}
                           </p>
                         </div>
-                        <span className="rounded-full bg-[#FF4B4B]/15 px-2 py-1 text-[10px] font-bold uppercase text-[#FF4B4B]">
+                        <span className="rounded-full bg-brand/15 px-2 py-1 text-[10px] font-bold uppercase text-brand">
                           {ev.status.replace('_', ' ')}
                         </span>
                       </div>
                       {ev.status === 'published' || ev.status === 'on_sale' ? (
-                        <Link to={`/events/${ev.slug}`} className="mt-2 inline-block text-xs text-[#FF4B4B]">
+                        <Link to={`/events/${ev.slug}`} className="mt-2 inline-block text-xs text-brand">
                           Public page
                         </Link>
                       ) : null}
@@ -333,7 +333,7 @@ export default function Tick3tOrganizerDashboard() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[#111] p-5">
+            <section className="rounded-2xl border border-black/10 bg-mist p-5">
               <h2 className="text-sm font-bold">Create event</h2>
               <form onSubmit={createEvent} className="mt-4 grid gap-3 sm:grid-cols-2">
                 <input
@@ -379,14 +379,14 @@ export default function Tick3tOrganizerDashboard() {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="min-h-[44px] rounded-xl bg-[#FF4B4B] px-4 py-2 text-sm font-bold sm:col-span-2 disabled:opacity-50"
+                  className="min-h-[44px] rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white sm:col-span-2 disabled:opacity-50"
                 >
                   {creating ? 'Saving…' : 'Save event'}
                 </button>
               </form>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[#111] p-5">
+            <section className="rounded-2xl border border-black/10 bg-mist p-5">
               <h2 className="text-sm font-bold">Add ticket type</h2>
               <form onSubmit={addTicketType} className="mt-4 grid gap-3 sm:grid-cols-3">
                 <select
@@ -421,7 +421,7 @@ export default function Tick3tOrganizerDashboard() {
                 />
                 <button
                   type="submit"
-                  className="min-h-[44px] rounded-xl border border-white/15 px-4 py-2 text-sm font-bold sm:col-span-3"
+                  className="min-h-[44px] rounded-xl border border-black/15 px-4 py-2 text-sm font-bold sm:col-span-3"
                 >
                   Add ticket type
                 </button>

@@ -107,7 +107,7 @@ export default function Tick3tScanner({
   return (
     <div className="space-y-4">
       {useCamera ? (
-        <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-black">
+        <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-black">
           <video
             ref={videoRef}
             className="aspect-[4/3] w-full object-cover"
@@ -143,7 +143,7 @@ export default function Tick3tScanner({
           onChange={(e) => setManual(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submitManual()}
           placeholder="Paste QR payload or ticket code"
-          className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/35"
+          className="min-w-0 flex-1 rounded-xl border border-black/10 bg-mist px-4 py-3 text-sm text-ink placeholder:text-ink/35"
           disabled={busy}
         />
         <button
@@ -151,7 +151,7 @@ export default function Tick3tScanner({
           onClick={submitManual}
           disabled={busy || !manual.trim()}
           className={cls(
-            'min-h-[44px] rounded-xl bg-[#FF4B4B] px-4 py-2 text-sm font-bold text-white',
+            'min-h-[44px] rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white',
             (busy || !manual.trim()) && 'opacity-40',
           )}
         >
@@ -163,7 +163,7 @@ export default function Tick3tScanner({
         <button
           type="button"
           onClick={() => setUseCamera(false)}
-          className="text-xs font-semibold text-white/45 underline-offset-2 hover:text-white/70 hover:underline"
+          className="text-xs font-semibold text-ink/45 underline-offset-2 hover:text-ink/70 hover:underline"
         >
           Use manual entry only
         </button>
