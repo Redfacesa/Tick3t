@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { clearSatelliteSession, getSatelliteUser } from '@/lib/satelliteSession';
 import { applyPaySsoTokensFromUrl } from '@/lib/sso';
 import { hasSupabaseConfig, supabase } from '@/lib/supabase';
 
@@ -80,10 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!on) return;
 
       const sessionUser = data.session?.user;
+      const satellite = getSatelliteUser();
+
       if (sessionUser?.email) {
         await applyUser({ id: sessionUser.id, email: sessionUser.email });
       } else if (sso?.email) {
         await applyUser({ id: sso.userId, email: sso.email });
+      } else if (satellite?.email) {
+        await applyUser({ id: satellite.id || satellite.email, email: satellite.email });
       } else {
         await applyUser(null);
       }
@@ -96,7 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sessionUser?.email) {
           await applyUser({ id: sessionUser.id, email: sessionUser.email });
         } else {
-          await applyUser(null);
+          const satellite = getSatelliteUser();
+          if (satellite?.email) {
+            await applyUser({ id: satellite.id || satellite.email, email: satellite.email });
+          } else {
+            await applyUser(null);
+          }
         }
         setLoading(false);
       })();
@@ -109,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyUser]);
 
   const signOut = useCallback(async () => {
+    clearSatelliteSession();
     await supabase.auth.signOut();
     await applyUser(null);
   }, [applyUser]);

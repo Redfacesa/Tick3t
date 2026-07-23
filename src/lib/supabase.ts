@@ -1,13 +1,13 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getSatelliteAccessToken } from '@/lib/satelliteSession';
 
 const env = import.meta.env;
 const supabaseUrl = (env.VITE_SUPABASE_URL as string | undefined)?.trim() || '';
 const supabaseKey = (env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() || '';
 
 /**
- * Tick3t is a Pay satellite: identity comes from RedFace Pay ecosystem SSO
- * (supabase setSession). Do not wire Clerk as Supabase third-party auth here —
- * that blocks Pay return tokens from establishing a session.
+ * Tick3t is a Pay satellite. Prefer native setSession when Pay returns access+refresh.
+ * When Pay/Clerk returns access_token only, Authorization is injected from satellite storage.
  */
 export const usesThirdPartySupabaseAuth = false;
 
@@ -36,6 +36,8 @@ export function registerClerkSignOut(fn: SignOutFn | null) {
 }
 
 export async function getSupabaseAccessToken(): Promise<string | null> {
+  const satellite = getSatelliteAccessToken();
+  if (satellite) return satellite;
   if (!supabaseInstance) return null;
   const { data } = await supabaseInstance.auth.getSession();
   return data.session?.access_token ?? null;
@@ -45,13 +47,24 @@ export async function signOutViaClerk(): Promise<void> {
   if (clerkSignOut) await clerkSignOut();
 }
 
+async function authedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  const token = await getSupabaseAccessToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return fetch(input, { ...init, headers });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabase: SupabaseClient<any, any, any> = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseKey || 'placeholder',
+  {
+    global: { fetch: authedFetch },
+  },
 );
 
 supabaseInstance = supabase;
 
-// Keep getters referenced so Clerk bridge can still register without enabling third-party mode.
 void clerkGetToken;
