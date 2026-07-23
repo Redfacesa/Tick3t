@@ -419,13 +419,23 @@ export default function Tick3tOrganizerDashboard() {
       <>
         <PageSeo title="Organizer" description="Tick3t organizer dashboard." path="/organizer" />
         <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
-          <h1 className="text-xl font-extrabold">Start selling tickets</h1>
-          <p className="mt-2 text-sm text-ink/55">Register as an organizer to create events on Tick3t.</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand">You&apos;re signed in</p>
+          <h1 className="mt-2 text-xl font-extrabold">One more step to sell tickets</h1>
+          <p className="mt-2 text-sm text-ink/55">
+            Signed in as <strong>{user.email}</strong>. Register as an organizer, then a platform admin
+            approves you before events go live.
+          </p>
+          <ol className="mx-auto mt-4 max-w-md list-decimal space-y-1 pl-5 text-left text-sm text-ink/60">
+            <li>Submit your organizer application</li>
+            <li>Wait for admin approval on Tick3t</li>
+            <li>Create events and ticket types</li>
+            <li>Share your event link — buyers pay via RedFace Pay</li>
+          </ol>
           <Link
             to="/organizer/register"
             className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-brand px-5 py-2 text-sm font-bold text-white"
           >
-            Register
+            Register as organizer
           </Link>
         </div>
       </>
@@ -452,15 +462,47 @@ export default function Tick3tOrganizerDashboard() {
             <h1 className="text-2xl font-extrabold">{organizer.company_name}</h1>
             <p className="mt-1 text-sm text-ink/55">{organizerStatusLabel(organizer.status)}</p>
           </div>
-          <Link to="/staff" className="rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white">
-            Door scan
-          </Link>
+          {organizer.status === 'approved' && (
+            <Link to="/staff" className="rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white">
+              Door scan
+            </Link>
+          )}
         </header>
 
         {statusBanner && (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950">
             {statusBanner}
           </div>
+        )}
+
+        {organizer.status !== 'approved' && (
+          <section className="space-y-4 rounded-2xl border border-black/10 bg-mist p-5">
+            <h2 className="font-bold">What happens next</h2>
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-ink/60">
+              <li>A Tick3t admin reviews your application</li>
+              <li>Once approved, this page unlocks event creation and ticket types</li>
+              <li>Buyers pay on RedFace Pay; tickets appear in Tick3t</li>
+            </ol>
+            <div className="space-y-1 border-t border-black/10 pt-4 text-sm">
+              <p>
+                <span className="text-ink/45">Company</span> · {organizer.company_name}
+              </p>
+              <p>
+                <span className="text-ink/45">Contact</span> · {organizer.contact_name}
+              </p>
+              <p>
+                <span className="text-ink/45">Email</span> · {organizer.email}
+              </p>
+              {organizer.admin_notes ? (
+                <p className="pt-2 text-amber-900">
+                  <span className="font-semibold">Admin notes:</span> {organizer.admin_notes}
+                </p>
+              ) : null}
+            </div>
+            <p className="text-xs text-ink/45">
+              Need help? Email info@redfacepay.co.za with your registered company name.
+            </p>
+          </section>
         )}
 
         {organizer.status === 'approved' && (

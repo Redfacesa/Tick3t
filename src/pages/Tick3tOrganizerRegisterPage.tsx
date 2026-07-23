@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
@@ -15,7 +15,7 @@ export default function Tick3tOrganizerRegisterPage() {
   const [form, setForm] = useState({
     company_name: '',
     contact_name: '',
-    email: user?.email || '',
+    email: '',
     phone: '',
     country: 'South Africa',
     bank_name: '',
@@ -25,6 +25,15 @@ export default function Tick3tOrganizerRegisterPage() {
     id_number: '',
     business_reg: '',
   });
+
+  useEffect(() => {
+    if (!user?.email) return;
+    setForm((prev) => ({
+      ...prev,
+      email: prev.email || user.email,
+      contact_name: prev.contact_name || user.email.split('@')[0] || '',
+    }));
+  }, [user?.email]);
 
   const set = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));

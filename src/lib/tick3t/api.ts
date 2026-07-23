@@ -143,6 +143,29 @@ export async function fetchTick3tAdminDashboard(): Promise<Tick3tAdminDashboard 
   return data as Tick3tAdminDashboard;
 }
 
+export type Tick3tAdminSale = {
+  id: string;
+  ticket_code: string;
+  event_name: string;
+  product_name: string;
+  buyer_name: string | null;
+  buyer_email: string;
+  amount_zar: number;
+  status: string;
+  venue: string | null;
+  event_date: string | null;
+  created_at: string;
+  merchant_id: string;
+  organizer_name: string | null;
+  organizer_email: string | null;
+};
+
+export async function fetchTick3tAdminSalesFeed(limit = 100): Promise<Tick3tAdminSale[]> {
+  const { data, error } = await supabase.rpc('tick3t_admin_sales_feed', { p_limit: limit });
+  if (error || !data?.ok) return [];
+  return (data.sales ?? []) as Tick3tAdminSale[];
+}
+
 export async function fetchMyTick3tTickets(): Promise<{ tickets: Tick3tTicket[]; error?: string }> {
   const { data, error } = await supabase.rpc('tick3t_my_tickets');
   if (error) return { tickets: [], error: error.message };
