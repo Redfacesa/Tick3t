@@ -30,7 +30,7 @@ import type {
   Tick3tTicket,
   Tick3tTicketType,
 } from '@/lib/tick3t/types';
-import { REDFACE_PAY_ORIGIN } from '@/lib/company';
+import { REDFACE_PAY_ORIGIN, SITE_URL } from '@/lib/company';
 
 const inputClass =
   'w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50';
@@ -276,8 +276,44 @@ export default function Tick3tOrganizerDashboard() {
     await reload();
   };
 
+  const eventPublicUrl = (ev: Pick<Tick3tEvent, 'slug' | 'merchant_id'>) =>
+    `${SITE_URL}/events/${ev.slug}?merchant_id=${encodeURIComponent(ev.merchant_id)}`;
+
+  const copyEventLink = async (ev: Tick3tEvent) => {
+    const url = eventPublicUrl(ev);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Public link copied');
+    } catch {
+      toast.message(url);
+    }
+  };
+
   const publishEvent = async (ev: Tick3tEvent, status: Tick3tEvent['status']) => {
     if (!organizer?.merchant_id) return;
+
+    if (status === 'on_sale' || status === 'published') {
+      const missing: string[] = [];
+      if (!ev.title?.trim()) missing.push('title');
+      if (!ev.slug?.trim()) missing.push('slug');
+      if (!ev.event_date) missing.push('event date');
+      if (!ev.venue?.trim() && !ev.city?.trim()) missing.push('venue or city');
+      const types = await fetchTick3tTicketTypes(organizer.merchant_id, ev.id);
+      const sellable = types.some((t) => t.status === 'on_sale');
+      if (!sellable) missing.push('at least one on-sale ticket type');
+      if (missing.length) {
+        toast.error(`Before going live: add ${missing.join(', ')}`);
+        if (!sellable) {
+          setTicketForm((f) => ({ ...f, event_id: ev.id }));
+          setTab('tickets');
+        } else {
+          editEvent(ev);
+          setTab('events');
+        }
+        return;
+      }
+    }
+
     const { eventId, error } = await upsertTick3tEvent(organizer.merchant_id, {
       id: ev.id,
       slug: ev.slug,
@@ -288,7 +324,13 @@ export default function Tick3tOrganizerDashboard() {
       toast.error(error || 'Could not update status');
       return;
     }
-    toast.success(`Event marked ${status.replace('_', ' ')}`);
+    toast.success(
+      status === 'on_sale'
+        ? 'Event is live and on sale'
+        : status === 'published'
+          ? 'Event listed (not selling yet)'
+          : `Event marked ${status.replace('_', ' ')}`,
+    );
     await reload();
   };
 
@@ -563,6 +605,10 @@ export default function Tick3tOrganizerDashboard() {
 
             {tab === 'events' && (
               <section className="space-y-6">
+                <p className="text-sm text-ink/55">
+                  Workflow: <strong>draft</strong> → add ticket types → <strong>on sale</strong> (public + selling).
+                  Use <strong>published</strong> to list without selling yet.
+                </p>
                 <ul className="space-y-2">
                   {events.map((ev) => (
                     <li key={ev.id} className="rounded-xl border border-black/10 bg-mist px-4 py-3">
@@ -572,73 +618,137 @@ export default function Tick3tOrganizerDashboard() {
                           <p className="text-xs text-ink/45">
                             /{ev.slug}
                             {ev.event_date ? ` · ${ev.event_date}` : ''}
+                            {ev.venue ? ` · ${ev.venue}` : ''}
                           </p>
                         </div>
                         <span className="rounded-full bg-brand/15 px-2 py-1 text-[10px] font-bold uppercase text-brand">
                           {ev.status.replace('_', ' ')}
                         </span>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2">
                         <button type="button" onClick={() => editEvent(ev)} className="text-xs font-semibold text-brand">
                           Edit workspace
                         </button>
-                        {ev.status === 'draft' && (
+                        <button type="button" onClick={() => void copyEventLink(ev)} className="text-xs font-semibold text-ink/55">
+                          Copy link
+                        </button>
+                        <Link
+                          to={`/events/${ev.slug}?merchant_id=${encodeURIComponent(ev.merchant_id)}`}
+                          className="text-xs font-semibold text-brand"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Preview
+                        </Link>
+                        {(ev.status === 'draft' || ev.status === 'published') && (
                           <button type="button" onClick={() => void publishEvent(ev, 'on_sale')} className="text-xs font-semibold text-emerald-700">
-                            Publish & on sale
+                            Put on sale
                           </button>
                         )}
-                        {(ev.status === 'published' || ev.status === 'on_sale') && (
+                        {ev.status === 'draft' && (
+                          <button type="button" onClick={() => void publishEvent(ev, 'published')} className="text-xs font-semibold text-ink/55">
+                            List only
+                          </button>
+                        )}
+                        {ev.status === 'on_sale' && (
                           <>
-                            <Link to={`/events/${ev.slug}`} className="text-xs text-brand">
-                              Public page
-                            </Link>
-                            <button type="button" onClick={() => void publishEvent(ev, 'completed')} className="text-xs font-semibold text-ink/55">
-                              Mark completed
+                            <button type="button" onClick={() => void publishEvent(ev, 'sold_out')} className="text-xs font-semibold text-amber-800">
+                              Mark sold out
+                            </button>
+                            <button type="button" onClick={() => void publishEvent(ev, 'draft')} className="text-xs font-semibold text-ink/55">
+                              Unpublish
                             </button>
                           </>
+                        )}
+                        {(ev.status === 'published' || ev.status === 'on_sale' || ev.status === 'sold_out') && (
+                          <button type="button" onClick={() => void publishEvent(ev, 'completed')} className="text-xs font-semibold text-ink/55">
+                            Complete
+                          </button>
+                        )}
+                        {ev.status !== 'cancelled' && ev.status !== 'completed' && (
+                          <button type="button" onClick={() => void publishEvent(ev, 'cancelled')} className="text-xs font-semibold text-red-700">
+                            Cancel
+                          </button>
                         )}
                       </div>
                     </li>
                   ))}
+                  {events.length === 0 && (
+                    <p className="text-sm text-ink/45">No events yet. Create one below, then add ticket types.</p>
+                  )}
                 </ul>
 
-                <form onSubmit={saveEvent} className="space-y-3 rounded-2xl border border-black/10 bg-mist p-5">
+                <form onSubmit={saveEvent} className="space-y-4 rounded-2xl border border-black/10 bg-mist p-5">
                   <h2 className="text-sm font-bold">{eventForm.id ? 'Edit event workspace' : 'Create event'}</h2>
+
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Basics</p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input className={inputClass} placeholder="Title" value={eventForm.title} onChange={(e) => setEventForm((f) => ({ ...f, title: e.target.value }))} required />
-                    <input className={inputClass} placeholder="Slug" value={eventForm.slug} onChange={(e) => setEventForm((f) => ({ ...f, slug: e.target.value }))} />
+                    <input className={inputClass} placeholder="Slug (url)" value={eventForm.slug} onChange={(e) => setEventForm((f) => ({ ...f, slug: e.target.value }))} />
                     <input className={inputClass} placeholder="Venue" value={eventForm.venue} onChange={(e) => setEventForm((f) => ({ ...f, venue: e.target.value }))} />
                     <input className={inputClass} placeholder="City" value={eventForm.city} onChange={(e) => setEventForm((f) => ({ ...f, city: e.target.value }))} />
-                    <input className={inputClass} type="date" value={eventForm.event_date} onChange={(e) => setEventForm((f) => ({ ...f, event_date: e.target.value }))} />
-                    <input className={inputClass} type="time" value={eventForm.doors_time} onChange={(e) => setEventForm((f) => ({ ...f, doors_time: e.target.value }))} />
+                    <label className="space-y-1 text-xs text-ink/55">
+                      Event date
+                      <input className={inputClass} type="date" value={eventForm.event_date} onChange={(e) => setEventForm((f) => ({ ...f, event_date: e.target.value }))} />
+                    </label>
+                    <label className="space-y-1 text-xs text-ink/55">
+                      Doors
+                      <input className={inputClass} type="time" value={eventForm.doors_time} onChange={(e) => setEventForm((f) => ({ ...f, doors_time: e.target.value }))} />
+                    </label>
+                    <label className="space-y-1 text-xs text-ink/55">
+                      Ends
+                      <input className={inputClass} type="time" value={eventForm.end_time} onChange={(e) => setEventForm((f) => ({ ...f, end_time: e.target.value }))} />
+                    </label>
                     <input className={inputClass} placeholder="Category" value={eventForm.category} onChange={(e) => setEventForm((f) => ({ ...f, category: e.target.value }))} />
                     <input className={inputClass} placeholder="Capacity" type="number" min={0} value={eventForm.capacity} onChange={(e) => setEventForm((f) => ({ ...f, capacity: e.target.value }))} />
                     <input className={inputClass} placeholder="Age restriction" value={eventForm.age_restriction} onChange={(e) => setEventForm((f) => ({ ...f, age_restriction: e.target.value }))} />
-                    <input className={inputClass} placeholder="Maps URL" value={eventForm.maps_url} onChange={(e) => setEventForm((f) => ({ ...f, maps_url: e.target.value }))} />
-                    <input className={inputClass} placeholder="Hero image URL" value={eventForm.hero_image_url} onChange={(e) => setEventForm((f) => ({ ...f, hero_image_url: e.target.value }))} />
-                    <input className={inputClass} placeholder="Poster image URL" value={eventForm.poster_image_url} onChange={(e) => setEventForm((f) => ({ ...f, poster_image_url: e.target.value }))} />
                     <select className={inputClass} value={eventForm.status} onChange={(e) => setEventForm((f) => ({ ...f, status: e.target.value }))}>
                       {['draft', 'published', 'on_sale', 'sold_out', 'cancelled', 'completed'].map((s) => (
                         <option key={s} value={s}>{s.replace('_', ' ')}</option>
                       ))}
                     </select>
                   </div>
+
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Story & media</p>
                   <textarea className={inputClass} rows={3} placeholder="Description" value={eventForm.description} onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))} />
                   <textarea className={inputClass} rows={2} placeholder="Lineup" value={eventForm.lineup} onChange={(e) => setEventForm((f) => ({ ...f, lineup: e.target.value }))} />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input className={inputClass} placeholder="Hero image URL" value={eventForm.hero_image_url} onChange={(e) => setEventForm((f) => ({ ...f, hero_image_url: e.target.value }))} />
+                    <input className={inputClass} placeholder="Poster image URL" value={eventForm.poster_image_url} onChange={(e) => setEventForm((f) => ({ ...f, poster_image_url: e.target.value }))} />
+                    <input className={`${inputClass} sm:col-span-2`} placeholder="Maps URL" value={eventForm.maps_url} onChange={(e) => setEventForm((f) => ({ ...f, maps_url: e.target.value }))} />
+                  </div>
+
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Policies & contact</p>
                   <textarea className={inputClass} rows={2} placeholder="Terms" value={eventForm.terms} onChange={(e) => setEventForm((f) => ({ ...f, terms: e.target.value }))} />
                   <textarea className={inputClass} rows={2} placeholder="Refund policy" value={eventForm.refund_policy} onChange={(e) => setEventForm((f) => ({ ...f, refund_policy: e.target.value }))} />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input className={inputClass} placeholder="Contact email" value={eventForm.contact_email} onChange={(e) => setEventForm((f) => ({ ...f, contact_email: e.target.value }))} />
                     <input className={inputClass} placeholder="Contact phone" value={eventForm.contact_phone} onChange={(e) => setEventForm((f) => ({ ...f, contact_phone: e.target.value }))} />
+                    <input className={inputClass} placeholder="Website URL" value={eventForm.website_url} onChange={(e) => setEventForm((f) => ({ ...f, website_url: e.target.value }))} />
+                    <input className={inputClass} placeholder="Instagram URL" value={eventForm.instagram_url} onChange={(e) => setEventForm((f) => ({ ...f, instagram_url: e.target.value }))} />
+                    <input className={`${inputClass} sm:col-span-2`} placeholder="Facebook URL" value={eventForm.facebook_url} onChange={(e) => setEventForm((f) => ({ ...f, facebook_url: e.target.value }))} />
                   </div>
+
                   <div className="flex flex-wrap gap-2">
                     <button type="submit" disabled={saving} className="rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">
                       {saving ? 'Saving…' : eventForm.id ? 'Save workspace' : 'Create event'}
                     </button>
                     {eventForm.id && (
-                      <button type="button" onClick={() => setEventForm(emptyEventForm)} className="rounded-xl border border-black/15 px-4 py-2.5 text-sm font-bold">
-                        Clear
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTicketForm((f) => ({ ...f, event_id: eventForm.id }));
+                            setTab('tickets');
+                          }}
+                          className="rounded-xl border border-black/15 px-4 py-2.5 text-sm font-bold"
+                        >
+                          Ticket types
+                        </button>
+                        <button type="button" onClick={() => setEventForm(emptyEventForm)} className="rounded-xl border border-black/15 px-4 py-2.5 text-sm font-bold">
+                          New event
+                        </button>
+                      </>
                     )}
                   </div>
                 </form>
