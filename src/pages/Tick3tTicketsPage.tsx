@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchMyTick3tTickets, ticketStatusLabel } from '@/lib/tick3t/api';
+import { fetchMyTick3tTickets, requestTick3tRefund, ticketStatusLabel } from '@/lib/tick3t/api';
 import { tick3tQrPayload } from '@/lib/tick3t/qr';
 import type { Tick3tTicket } from '@/lib/tick3t/types';
 import { fmtMoney } from '@/lib/format';
@@ -112,6 +113,23 @@ export default function Tick3tTicketsPage() {
                       {ticketStatusLabel(t.status)}
                     </span>
                     <span className="text-xs text-ink/45">{fmtMoney(t.amount_zar)}</span>
+                    {['valid', 'paid', 'checked_in'].includes(t.status) && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-brand underline-offset-2 hover:underline"
+                        onClick={async () => {
+                          const reason = window.prompt('Why do you need a refund?') || '';
+                          const res = await requestTick3tRefund({
+                            ticket_id: t.id,
+                            reason: reason || undefined,
+                          });
+                          if (!res.ok) toast.error(res.error || 'Could not request refund');
+                          else toast.success('Refund requested — the organizer will review it');
+                        }}
+                      >
+                        Request refund
+                      </button>
+                    )}
                   </div>
                 </div>
               </li>

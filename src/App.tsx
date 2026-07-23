@@ -54,6 +54,7 @@ export default function App() {
               <Route path="organizer" element={<Tick3tOrganizerDashboard />} />
               <Route path="organizer/events" element={<Tick3tOrganizerDashboard />} />
               <Route path="staff" element={<Tick3tStaffPage />} />
+              <Route path="checkin" element={<Tick3tStaffPage />} />
               <Route path="admin" element={<Tick3tAdminPage />} />
               <Route path="login" element={<LoginGatewayPage />} />
               <Route path="login/admin" element={<AdminLogin />} />

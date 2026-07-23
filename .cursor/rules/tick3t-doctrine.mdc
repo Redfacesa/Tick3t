@@ -1,0 +1,15 @@
+---
+description: Tick3t Event OS doctrine — always follow vision, roadmap, and Pay boundary
+alwaysApply: true
+---
+
+# Tick3t doctrine
+
+Before implementing features, align with:
+
+- [VISION.md](../../VISION.md) — product north star
+- [ROADMAP.md](../../ROADMAP.md) — current phase is **Phase 1** unless the user says otherwise
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Tick3t vs RedFace Pay boundaries
+- [AGENTS.md](../../AGENTS.md) — implementation rules
+
+**Tick3t** = event operating system. **RedFace Pay** = money. Do not duplicate payments inside Tick3t. Ticket checkout lines use `ticket_type_id`, never catalog `product_id`.

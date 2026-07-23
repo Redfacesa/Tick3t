@@ -8,8 +8,12 @@ import type {
   Tick3tOrganizer,
   Tick3tOrganizerRegisterPayload,
   Tick3tOrganizerStatus,
+  Tick3tPromoCode,
   Tick3tPublicEvent,
+  Tick3tRefundRequest,
   Tick3tScanResult,
+  Tick3tStaff,
+  Tick3tStaffAssignment,
   Tick3tTicket,
   Tick3tTicketType,
 } from '@/lib/tick3t/types';
@@ -267,4 +271,103 @@ export function buildTick3tCheckoutUrl(
   if (buyer?.email) q.set('login_hint', buyer.email.trim().toLowerCase());
   if (buyer?.name) q.set('buyer_name', buyer.name.trim());
   return `${REDFACE_PAY_ORIGIN}/pay?${q.toString()}`;
+}
+
+export async function fetchTick3tTicketTypes(
+  merchantId: string,
+  eventId: string,
+): Promise<Tick3tTicketType[]> {
+  const { data, error } = await supabase.rpc('tick3t_ticket_types_list', {
+    p_merchant_id: merchantId,
+    p_event_id: eventId,
+  });
+  if (error || !data?.ok) return [];
+  return (data.ticket_types ?? []) as Tick3tTicketType[];
+}
+
+export async function fetchTick3tStaff(merchantId: string): Promise<Tick3tStaff[]> {
+  const { data, error } = await supabase.rpc('tick3t_staff_list', { p_merchant_id: merchantId });
+  if (error || !data?.ok) return [];
+  return (data.staff ?? []) as Tick3tStaff[];
+}
+
+export async function upsertTick3tStaff(
+  merchantId: string,
+  payload: Partial<Tick3tStaff> & { email: string; role: string },
+): Promise<{ staffId: string | null; error?: string }> {
+  const { data, error } = await supabase.rpc('tick3t_staff_upsert', {
+    p_merchant_id: merchantId,
+    p_payload: payload,
+  });
+  if (error) return { staffId: null, error: error.message };
+  if (!data?.ok) return { staffId: null, error: data?.message || 'Could not save staff' };
+  return { staffId: data.staff_id as string };
+}
+
+export async function fetchTick3tStaffAssignments(): Promise<Tick3tStaffAssignment[]> {
+  const { data, error } = await supabase.rpc('tick3t_staff_merchants_for_me');
+  if (error || !data?.ok) return [];
+  return (data.assignments ?? []) as Tick3tStaffAssignment[];
+}
+
+export async function fetchTick3tPromos(merchantId: string): Promise<Tick3tPromoCode[]> {
+  const { data, error } = await supabase.rpc('tick3t_promo_list', { p_merchant_id: merchantId });
+  if (error || !data?.ok) return [];
+  return (data.promos ?? []) as Tick3tPromoCode[];
+}
+
+export async function upsertTick3tPromo(
+  merchantId: string,
+  payload: Partial<Tick3tPromoCode> & { code: string; discount_value: number },
+): Promise<{ promoId: string | null; error?: string }> {
+  const { data, error } = await supabase.rpc('tick3t_promo_upsert', {
+    p_merchant_id: merchantId,
+    p_payload: payload,
+  });
+  if (error) return { promoId: null, error: error.message };
+  if (!data?.ok) return { promoId: null, error: data?.message || 'Could not save promo' };
+  return { promoId: data.promo_id as string };
+}
+
+export async function fetchTick3tRefunds(merchantId: string): Promise<Tick3tRefundRequest[]> {
+  const { data, error } = await supabase.rpc('tick3t_refund_list', { p_merchant_id: merchantId });
+  if (error || !data?.ok) return [];
+  return (data.refunds ?? []) as Tick3tRefundRequest[];
+}
+
+export async function requestTick3tRefund(payload: {
+  ticket_id: string;
+  reason?: string;
+  buyer_email?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc('tick3t_refund_request', { p_payload: payload });
+  if (error) return { ok: false, error: error.message };
+  if (!data?.ok) return { ok: false, error: data?.message || 'Could not request refund' };
+  return { ok: true };
+}
+
+export async function decideTick3tRefund(
+  merchantId: string,
+  refundId: string,
+  decision: 'approved' | 'rejected',
+  notes?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc('tick3t_refund_decide', {
+    p_merchant_id: merchantId,
+    p_refund_id: refundId,
+    p_decision: decision,
+    p_notes: notes || null,
+  });
+  if (error) return { ok: false, error: error.message };
+  if (!data?.ok) return { ok: false, error: data?.message || 'Could not decide refund' };
+  return { ok: true };
+}
+
+/** True when ticket type is currently purchasable. */
+export function isTicketTypeOnSale(tt: Tick3tTicketType, now = new Date()): boolean {
+  if (tt.status !== 'on_sale') return false;
+  if (tt.capacity != null && (tt.sold_count ?? 0) >= tt.capacity) return false;
+  if (tt.sale_opens_at && new Date(tt.sale_opens_at) > now) return false;
+  if (tt.sale_closes_at && new Date(tt.sale_closes_at) < now) return false;
+  return true;
 }

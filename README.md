@@ -1,8 +1,15 @@
 # Tick3t
 
-**The easiest way in Africa to create, manage and sell tickets for any event.**
+**Africa's Event Operating System** — create, manage, sell, and run events. RedFace Pay is the payment engine underneath.
 
-Tick3t is a **Ticketing Operating System**. RedFace Pay is the invisible payment engine underneath.
+## Guiding docs
+
+| Doc | Purpose |
+|-----|---------|
+| [VISION.md](./VISION.md) | Product vision & north star |
+| [AGENTS.md](./AGENTS.md) | AI / developer principles |
+| [ROADMAP.md](./ROADMAP.md) | Phased plan (current: **Phase 1**) |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Tick3t vs RedFace Pay boundaries |
 
 ## Stack
 
@@ -15,8 +22,8 @@ Tick3t is a **Ticketing Operating System**. RedFace Pay is the invisible payment
 
 | Product | Role |
 |---------|------|
-| **Tick3t** (this repo) | Events, ticket types, checkout UX, QR tickets, door scan, organizer & admin |
-| **RedFace Pay** | Merchant identity, KYC, Paystack subaccounts, payment sessions, settlements |
+| **Tick3t** (this repo) | Events, discovery, ticketing, QR, door scan, organizer OS, admin |
+| **RedFace Pay** | Merchant identity, KYC, Paystack, settlements, wallets, payouts |
 
 ## Local development
 
@@ -26,6 +33,8 @@ cp .env.example .env
 npm install
 npm run dev
 ```
+
+Hub migrations for Tick3t live in the RedFace Pay repo (`supabase/migrations/0333_tick3t_phase1_ops.sql` and earlier). Apply them to the shared Supabase project before using staff / promos / refunds RPCs.
 
 ## Deploy (Vercel)
 
@@ -42,14 +51,12 @@ npm run dev
 | `/` | Landing + live events |
 | `/events/:slug` | Event + buy |
 | `/tickets` | My ticket wallet |
-| `/organizer` | Organizer dashboard |
+| `/organizer` | Organizer OS (workspace, tickets, staff, promos, finance) |
 | `/organizer/register` | Organizer application |
-| `/staff` | Door check-in scanner |
+| `/staff` · `/checkin` | Door check-in (offline queue supported) |
 | `/admin` | Platform admin |
-| `/login` | Choose Admin or Seller (or buyer wallet) |
-| `/login/admin` | Admin sign-in |
-| `/login/sell` | Seller / organizer sign-in |
-| `/login/buy` | Ticket wallet sign-in |
+| `/login` | Role chooser |
+| `/login/admin` · `/sell` · `/buy` | Role sign-in |
 
 Legacy `/tick3t/*` URLs redirect to the paths above.
 
@@ -63,12 +70,10 @@ Source assets in `/brand` (also served from `/public/tick3t` at runtime):
 
 ## Platform co-owners (Tick3t admins)
 
-Tick3t is co-owned by **RedFace Pay** and **Entendre**. These emails are platform admins (hub `platform_ecosystem_apps.admin_emails` for `tick3t` + `entendre`, mirrored in `src/lib/tick3t/admins.ts`):
-
 - `info@redfacepay.co.za` — RedFace Pay
 - `3ntendr3@gmail.com` — Entendre
 
 ## Related
 
-- Payment engine / monorepo: [Redfacesa/Redface-pay](https://github.com/Redfacesa/Redface-pay)
+- Payment engine: [Redfacesa/Redface-pay](https://github.com/Redfacesa/Redface-pay)
 - Live Pay checkout: `https://www.redfacepay.co.za/pay`

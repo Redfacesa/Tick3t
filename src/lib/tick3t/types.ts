@@ -154,7 +154,67 @@ export type Tick3tDashboardStats = {
   valid: number;
   checked_in: number;
   revenue_zar: number;
+  refunded?: number;
+  refunded_zar?: number;
+  net_revenue_zar?: number;
+  events_live?: number;
   recent_scans: Array<{ id: string; result: string; created_at: string }>;
+};
+
+export type Tick3tStaffRole =
+  | 'owner'
+  | 'manager'
+  | 'scanner'
+  | 'marketing'
+  | 'finance'
+  | 'volunteer'
+  | 'security'
+  | 'support';
+
+export type Tick3tStaff = {
+  id: string;
+  merchant_id: string;
+  event_id: string | null;
+  email: string;
+  display_name: string | null;
+  role: Tick3tStaffRole;
+  status: 'invited' | 'active' | 'revoked';
+  created_at: string;
+};
+
+export type Tick3tPromoCode = {
+  id: string;
+  merchant_id: string;
+  event_id: string | null;
+  code: string;
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
+  max_redemptions: number | null;
+  redemption_count: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  active: boolean;
+};
+
+export type Tick3tRefundRequest = {
+  id: string;
+  merchant_id: string;
+  ticket_id: string;
+  buyer_email: string;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  amount_zar: number | null;
+  admin_notes: string | null;
+  created_at: string;
+};
+
+export type Tick3tStaffAssignment = {
+  staff_id: string;
+  merchant_id: string;
+  event_id: string | null;
+  role: Tick3tStaffRole;
+  status: string;
+  company_name: string | null;
 };
 
 export type Tick3tAdminDashboard = {
