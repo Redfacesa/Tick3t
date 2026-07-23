@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
-import { buildTick3tCheckoutUrl, fetchPublicTick3tEvent, isTicketTypeOnSale } from '@/lib/tick3t/api';
+import {
+  buildTick3tCheckoutUrl,
+  fetchPublicTick3tEvent,
+  isTicketTypeOnSale,
+  validateTick3tPromo,
+} from '@/lib/tick3t/api';
 import type { Tick3tPublicEvent, Tick3tTicketType } from '@/lib/tick3t/types';
 import { fmtMoney } from '@/lib/format';
 
@@ -14,6 +19,14 @@ export default function Tick3tEventPage() {
   const [types, setTypes] = useState<Tick3tTicketType[]>([]);
   const [loading, setLoading] = useState(true);
   const [qtyByType, setQtyByType] = useState<Record<string, number>>({});
+  const [promoInput, setPromoInput] = useState('');
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    discountZar: number;
+    discountType?: string;
+    discountValue?: number;
+  } | null>(null);
 
   useEffect(() => {
     let on = true;
@@ -38,6 +51,72 @@ export default function Tick3tEventPage() {
     };
   }, [slug, merchantHint]);
 
+  const applyPromo = async () => {
+    if (!event) return;
+    const code = promoInput.trim().toUpperCase();
+    if (!code) {
+      toast.error('Enter a promo code');
+      return;
+    }
+    // Quote against a sample subtotal so % / fixed codes validate; buy path recomputes.
+    const sample = types.find((t) => isTicketTypeOnSale(t));
+    const sampleSubtotal = sample ? Number(sample.price_zar) || 0 : 0;
+    setPromoBusy(true);
+    const quote = await validateTick3tPromo({
+      merchantId: event.merchant_id,
+      code,
+      eventId: event.id,
+      subtotalZar: sampleSubtotal || 100,
+    });
+    setPromoBusy(false);
+    if (!quote.ok) {
+      setAppliedPromo(null);
+      toast.error(quote.message || 'Invalid promo');
+      return;
+    }
+    setAppliedPromo({
+      code: String(quote.code || code),
+      discountZar: Number(quote.discount_zar) || 0,
+      discountType: quote.discount_type,
+      discountValue: Number(quote.discount_value) || undefined,
+    });
+    toast.success(`Promo ${quote.code} applied`);
+  };
+
+  const clearPromo = () => {
+    setAppliedPromo(null);
+    setPromoInput('');
+  };
+
+  const discountedAmount = (unit: number, qty: number) => {
+    const subtotal = unit * qty;
+    if (!appliedPromo) return { amount: subtotal, discount: 0, subtotal };
+    let discount = 0;
+    if (appliedPromo.discountType === 'percent' && appliedPromo.discountValue != null) {
+      discount = Math.round(subtotal * (appliedPromo.discountValue / 100) * 100) / 100;
+    } else if (appliedPromo.discountType === 'fixed' && appliedPromo.discountValue != null) {
+      discount = Math.min(subtotal, appliedPromo.discountValue);
+    } else {
+      discount = Math.min(subtotal, appliedPromo.discountZar);
+    }
+    return {
+      subtotal,
+      discount,
+      amount: Math.max(0, Math.round((subtotal - discount) * 100) / 100),
+    };
+  };
+
+  const promoHint = useMemo(() => {
+    if (!appliedPromo) return null;
+    if (appliedPromo.discountType === 'percent' && appliedPromo.discountValue != null) {
+      return `${appliedPromo.code} · ${appliedPromo.discountValue}% off`;
+    }
+    if (appliedPromo.discountType === 'fixed' && appliedPromo.discountValue != null) {
+      return `${appliedPromo.code} · ${fmtMoney(appliedPromo.discountValue)} off`;
+    }
+    return appliedPromo.code;
+  }, [appliedPromo]);
+
   const buy = (tt: Tick3tTicketType) => {
     if (!event) return;
     if (!isTicketTypeOnSale(tt)) {
@@ -59,7 +138,25 @@ export default function Tick3tEventPage() {
       toast.error(`Only ${remaining} left`);
       return;
     }
-    const url = buildTick3tCheckoutUrl(event.merchant_id, event, tt, qty);
+    const priced = discountedAmount(Number(tt.price_zar) || 0, qty);
+    if (priced.amount <= 0) {
+      toast.error('Amount after discount must be greater than zero');
+      return;
+    }
+    const url = buildTick3tCheckoutUrl(
+      event.merchant_id,
+      event,
+      tt,
+      qty,
+      undefined,
+      appliedPromo
+        ? {
+            code: appliedPromo.code,
+            amountZar: priced.amount,
+            discountZar: priced.discount,
+          }
+        : undefined,
+    );
     window.location.assign(url);
   };
 
@@ -134,6 +231,38 @@ export default function Tick3tEventPage() {
           </section>
         )}
 
+        <section className="rounded-2xl border border-black/10 bg-mist p-4">
+          <h2 className="text-sm font-bold">Promo code</h2>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              className="min-h-[44px] flex-1 rounded-xl border border-black/10 bg-white px-3 text-sm uppercase outline-none focus:border-brand/50"
+              placeholder="Enter code"
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+              disabled={!!appliedPromo}
+            />
+            {appliedPromo ? (
+              <button
+                type="button"
+                onClick={clearPromo}
+                className="min-h-[44px] rounded-xl border border-black/15 px-4 text-sm font-bold"
+              >
+                Remove
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void applyPromo()}
+                disabled={promoBusy}
+                className="min-h-[44px] rounded-xl bg-brand px-4 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {promoBusy ? 'Checking…' : 'Apply'}
+              </button>
+            )}
+          </div>
+          {promoHint && <p className="mt-2 text-xs font-semibold text-brand">{promoHint}</p>}
+        </section>
+
         <section className="space-y-3">
           <h2 className="text-sm font-bold">Tickets</h2>
           {types.length === 0 ? (
@@ -141,54 +270,65 @@ export default function Tick3tEventPage() {
           ) : (
             types.map((tt) => {
               const onSale = isTicketTypeOnSale(tt);
+              const qty = qtyByType[tt.id] ?? 1;
+              const priced = discountedAmount(Number(tt.price_zar) || 0, qty);
               return (
-              <div
-                key={tt.id}
-                className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-mist p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-bold">{tt.name}</p>
-                  {tt.description && <p className="mt-1 text-xs text-ink/45">{tt.description}</p>}
-                  <p className="mt-2 text-sm font-bold text-brand">{fmtMoney(tt.price_zar)}</p>
-                  {!onSale && (
-                    <p className="mt-1 text-xs text-ink/40">
-                      {tt.status === 'sold_out'
-                        ? 'Sold out'
-                        : tt.sale_opens_at && new Date(tt.sale_opens_at) > new Date()
-                          ? `Opens ${new Date(tt.sale_opens_at).toLocaleString()}`
-                          : 'Not on sale'}
+                <div
+                  key={tt.id}
+                  className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-mist p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-bold">{tt.name}</p>
+                    {tt.description && <p className="mt-1 text-xs text-ink/45">{tt.description}</p>}
+                    <p className="mt-2 text-sm font-bold text-brand">
+                      {appliedPromo && priced.discount > 0 ? (
+                        <>
+                          <span className="mr-2 text-ink/35 line-through">{fmtMoney(priced.subtotal)}</span>
+                          {fmtMoney(priced.amount)}
+                        </>
+                      ) : (
+                        fmtMoney(tt.price_zar)
+                      )}
                     </p>
-                  )}
+                    {!onSale && (
+                      <p className="mt-1 text-xs text-ink/40">
+                        {tt.status === 'sold_out'
+                          ? 'Sold out'
+                          : tt.sale_opens_at && new Date(tt.sale_opens_at) > new Date()
+                            ? `Opens ${new Date(tt.sale_opens_at).toLocaleString()}`
+                            : 'Not on sale'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="sr-only" htmlFor={`qty-${tt.id}`}>
+                      Quantity
+                    </label>
+                    <input
+                      id={`qty-${tt.id}`}
+                      type="number"
+                      min={1}
+                      max={tt.max_per_customer ?? 10}
+                      value={qtyByType[tt.id] ?? 1}
+                      onChange={(e) =>
+                        setQtyByType((prev) => ({
+                          ...prev,
+                          [tt.id]: Math.max(1, Number(e.target.value) || 1),
+                        }))
+                      }
+                      className="w-16 rounded-lg border border-black/10 bg-white px-2 py-2 text-center text-sm"
+                      disabled={!onSale}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => buy(tt)}
+                      disabled={!onSale}
+                      className="min-h-[44px] rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                    >
+                      {!onSale ? (tt.status === 'sold_out' ? 'Sold out' : 'Unavailable') : 'Buy'}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="sr-only" htmlFor={`qty-${tt.id}`}>
-                    Quantity
-                  </label>
-                  <input
-                    id={`qty-${tt.id}`}
-                    type="number"
-                    min={1}
-                    max={tt.max_per_customer ?? 10}
-                    value={qtyByType[tt.id] ?? 1}
-                    onChange={(e) =>
-                      setQtyByType((prev) => ({
-                        ...prev,
-                        [tt.id]: Math.max(1, Number(e.target.value) || 1),
-                      }))
-                    }
-                    className="w-16 rounded-lg border border-black/10 bg-white px-2 py-2 text-center text-sm"
-                    disabled={!onSale}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => buy(tt)}
-                    disabled={!onSale}
-                    className="min-h-[44px] rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
-                  >
-                    {!onSale ? (tt.status === 'sold_out' ? 'Sold out' : 'Unavailable') : 'Buy'}
-                  </button>
-                </div>
-              </div>
               );
             })
           )}

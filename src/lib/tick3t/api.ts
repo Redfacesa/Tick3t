@@ -254,10 +254,15 @@ export function buildTick3tCheckoutUrl(
   ticketType: Pick<Tick3tTicketType, 'id' | 'name' | 'price_zar'>,
   qty: number,
   buyer?: { email?: string; name?: string },
+  promo?: { code?: string; amountZar?: number; discountZar?: number },
 ): string {
   const quantity = Math.max(1, Math.floor(qty || 1));
   const unit = Number(ticketType.price_zar) || 0;
-  const amount = unit * quantity;
+  const subtotal = unit * quantity;
+  const amount =
+    promo?.amountZar != null && Number.isFinite(promo.amountZar)
+      ? Math.max(0, Number(promo.amountZar))
+      : subtotal;
   const site = COMPANY_INFO.website.replace(/\/$/, '');
   const bookingId = `tick3t:${event.id}:${ticketType.id}`;
   const label = `${event.title} · ${ticketType.name}${quantity > 1 ? ` x${quantity}` : ''}`;
@@ -293,7 +298,63 @@ export function buildTick3tCheckoutUrl(
   if (event.event_date) q.set('event_date', event.event_date);
   if (buyer?.email) q.set('login_hint', buyer.email.trim().toLowerCase());
   if (buyer?.name) q.set('buyer_name', buyer.name.trim());
+  if (promo?.code) {
+    q.set('promo_code', promo.code.trim().toUpperCase());
+    if (promo.discountZar != null) q.set('discount_zar', String(promo.discountZar));
+    q.set('subtotal_zar', String(subtotal));
+  }
   return `${REDFACE_PAY_ORIGIN}/pay?${q.toString()}`;
+}
+
+export type Tick3tPromoQuote = {
+  ok: boolean;
+  promo_id?: string;
+  code?: string;
+  discount_type?: string;
+  discount_value?: number;
+  discount_zar?: number;
+  subtotal_zar?: number;
+  amount_zar?: number;
+  message?: string;
+};
+
+/** Validate a public promo code against a cart subtotal. */
+export async function validateTick3tPromo(input: {
+  merchantId: string;
+  code: string;
+  eventId: string;
+  subtotalZar: number;
+}): Promise<Tick3tPromoQuote> {
+  const code = input.code.trim().toUpperCase();
+  if (!code) return { ok: false, message: 'Enter a promo code' };
+  const { data, error } = await supabase.rpc('tick3t_promo_validate', {
+    p_merchant_id: input.merchantId,
+    p_code: code,
+    p_event_id: input.eventId,
+    p_subtotal: input.subtotalZar,
+  });
+  if (error) {
+    return {
+      ok: false,
+      message: error.message.includes('Could not find')
+        ? 'Promo codes are not enabled yet'
+        : error.message,
+    };
+  }
+  if (!data?.ok) {
+    const msg = String(data?.message || 'invalid_code');
+    const friendly: Record<string, string> = {
+      invalid_code: 'Invalid promo code',
+      inactive: 'This promo is inactive',
+      not_started: 'This promo is not active yet',
+      expired: 'This promo has expired',
+      exhausted: 'This promo has been fully redeemed',
+      wrong_event: 'This promo is for a different event',
+      code_required: 'Enter a promo code',
+    };
+    return { ok: false, message: friendly[msg] || msg };
+  }
+  return data as Tick3tPromoQuote;
 }
 
 export async function fetchTick3tTicketTypes(
