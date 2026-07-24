@@ -22,10 +22,16 @@ export default function Tick3tScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const loopRef = useRef<number | null>(null);
+  const lastScanRef = useRef<{ value: string; at: number }>({ value: '', at: 0 });
+  const busyRef = useRef(!!busy);
+  const onScanRef = useRef(onScan);
   const [cameraReady, setCameraReady] = useState(false);
   const [manual, setManual] = useState('');
   const [error, setError] = useState('');
   const [useCamera, setUseCamera] = useState(true);
+
+  busyRef.current = !!busy;
+  onScanRef.current = onScan;
 
   const stopCamera = useCallback(() => {
     if (loopRef.current) {
@@ -35,6 +41,14 @@ export default function Tick3tScanner({
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setCameraReady(false);
+  }, []);
+
+  const emitScan = useCallback((raw: string) => {
+    const now = Date.now();
+    const last = lastScanRef.current;
+    if (last.value === raw && now - last.at < 3500) return;
+    lastScanRef.current = { value: raw, at: now };
+    void onScanRef.current(raw);
   }, []);
 
   useEffect(() => {
@@ -71,18 +85,17 @@ export default function Tick3tScanner({
           const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
           loopRef.current = window.setInterval(async () => {
             const video = videoRef.current;
-            if (!video || video.readyState < 2 || busy) return;
+            if (!video || video.readyState < 2 || busyRef.current) return;
             try {
               const codes = await detector.detect(video);
               const raw = codes[0]?.rawValue;
               if (raw && parseTick3tQr(raw)) {
-                stopCamera();
-                void onScan(raw);
+                emitScan(raw);
               }
             } catch {
               /* ignore frame errors */
             }
-          }, 500);
+          }, 400);
         }
       } catch {
         setUseCamera(false);
@@ -95,12 +108,12 @@ export default function Tick3tScanner({
       on = false;
       stopCamera();
     };
-  }, [useCamera, stopCamera, onScan, busy]);
+  }, [useCamera, stopCamera, emitScan]);
 
   const submitManual = () => {
     const value = manual.trim();
     if (!value) return;
-    void onScan(value);
+    emitScan(value);
     setManual('');
   };
 
@@ -127,11 +140,16 @@ export default function Tick3tScanner({
               Point camera at QR, then enter code below if auto-scan is unavailable.
             </p>
           )}
+          {busy && (
+            <div className="absolute inset-x-0 bottom-0 bg-brand/90 px-3 py-2 text-center text-xs font-bold text-white">
+              Checking…
+            </div>
+          )}
         </div>
       ) : null}
 
       {error && (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950">
           {error}
         </p>
       )}

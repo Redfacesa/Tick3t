@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Wifi, WifiOff, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,6 +20,27 @@ import {
 import { scanResultLabel, scanResultTone } from '@/lib/tick3t/qr';
 import type { Tick3tEvent, Tick3tStaffAssignment } from '@/lib/tick3t/types';
 
+function playTone(kind: 'ok' | 'warn' | 'err') {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = kind === 'ok' ? 880 : kind === 'warn' ? 520 : 220;
+    gain.gain.value = 0.05;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+    osc.stop(ctx.currentTime + 0.2);
+    void ctx.resume();
+  } catch {
+    /* ignore audio failures */
+  }
+}
+
 export default function Tick3tStaffPage() {
   const { user, merchant, loading: authLoading } = useAuth();
   const [sp] = useSearchParams();
@@ -28,8 +49,12 @@ export default function Tick3tStaffPage() {
   const [assignments, setAssignments] = useState<Tick3tStaffAssignment[]>([]);
   const [eventId, setEventId] = useState('');
   const [scanBusy, setScanBusy] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
   const [queued, setQueued] = useState(0);
+  const [sessionOk, setSessionOk] = useState(0);
+  const [sessionBad, setSessionBad] = useState(0);
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'warning' | 'error';
     title: string;
@@ -39,6 +64,11 @@ export default function Tick3tStaffPage() {
   const refreshQueueCount = useCallback(() => {
     setQueued(listOfflineScans(merchantId || undefined).length);
   }, [merchantId]);
+
+  const liveEvents = useMemo(() => {
+    const live = events.filter((e) => e.status === 'on_sale' || e.status === 'published' || e.status === 'sold_out');
+    return live.length ? live : events;
+  }, [events]);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -61,13 +91,18 @@ export default function Tick3tStaffPage() {
       ]);
       if (!on) return;
       setAssignments(staffAssign);
-      const mid = me?.merchant_id || merchant?.id || staffAssign[0]?.merchant_id || sp.get('merchant_id') || '';
+      const mid =
+        me?.merchant_id || merchant?.id || staffAssign[0]?.merchant_id || sp.get('merchant_id') || '';
       setMerchantId(mid);
       if (mid) {
         const ev = await fetchTick3tEvents(mid);
         if (!on) return;
         setEvents(ev);
-        if (ev[0]) setEventId(ev[0].id);
+        const preferred =
+          ev.find((e) => e.status === 'on_sale') ||
+          ev.find((e) => e.status === 'published') ||
+          ev[0];
+        if (preferred) setEventId(preferred.id);
       }
     })();
     return () => {
@@ -80,18 +115,28 @@ export default function Tick3tStaffPage() {
   }, [refreshQueueCount]);
 
   useEffect(() => {
+    if (!feedback) return;
+    const t = window.setTimeout(() => setFeedback(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [feedback]);
+
+  const syncQueue = useCallback(async () => {
+    if (!merchantId || !navigator.onLine) return;
+    setSyncBusy(true);
+    const { flushed, failed } = await flushOfflineScans(async (mid, payload) => {
+      const result = await validateAndCheckIn(mid, payload);
+      return { ok: result.ok };
+    });
+    setSyncBusy(false);
+    refreshQueueCount();
+    if (flushed > 0) toast.success(`Synced ${flushed} offline scan${flushed === 1 ? '' : 's'}`);
+    if (failed > 0) toast.error(`${failed} scan${failed === 1 ? '' : 's'} still offline`);
+  }, [merchantId, refreshQueueCount]);
+
+  useEffect(() => {
     if (!online || !merchantId) return;
-    void (async () => {
-      const { flushed } = await flushOfflineScans(async (mid, payload) => {
-        const result = await validateAndCheckIn(mid, payload);
-        return { ok: result.ok };
-      });
-      if (flushed > 0) {
-        toast.success(`Synced ${flushed} offline scan${flushed === 1 ? '' : 's'}`);
-        refreshQueueCount();
-      }
-    })();
-  }, [online, merchantId, refreshQueueCount]);
+    void syncQueue();
+  }, [online, merchantId, syncQueue]);
 
   const handleScan = useCallback(
     async (payload: string) => {
@@ -99,8 +144,9 @@ export default function Tick3tStaffPage() {
         setFeedback({
           tone: 'error',
           title: 'No merchant context',
-          detail: 'Select an approved organizer merchant first.',
+          detail: 'Sign in as an organizer or pick a staff assignment.',
         });
+        playTone('err');
         return;
       }
 
@@ -112,6 +158,7 @@ export default function Tick3tStaffPage() {
           title: 'Queued offline',
           detail: 'Scan saved on this device. It will sync when you are back online.',
         });
+        playTone('warn');
         return;
       }
 
@@ -120,13 +167,23 @@ export default function Tick3tStaffPage() {
       try {
         const result = await validateAndCheckIn(merchantId, payload);
         const code = result.ok ? 'valid' : result.code;
+        const tone = scanResultTone(code);
         setFeedback({
-          tone: scanResultTone(code),
+          tone,
           title: scanResultLabel(code),
           detail: result.ok
-            ? `${(result.ticket as { buyer_name?: string }).buyer_name ?? 'Guest'} · ${(result.ticket as { event_name?: string }).event_name ?? ''}`
+            ? `${(result.ticket as { buyer_name?: string }).buyer_name ?? 'Guest'} · ${(result.ticket as { event_name?: string }).event_name ?? ''}${
+                eventId ? '' : ''
+              }`
             : result.message,
         });
+        if (result.ok) {
+          setSessionOk((n) => n + 1);
+          playTone('ok');
+        } else {
+          setSessionBad((n) => n + 1);
+          playTone(tone === 'warning' ? 'warn' : 'err');
+        }
       } catch (err) {
         enqueueOfflineScan(merchantId, payload);
         refreshQueueCount();
@@ -135,11 +192,12 @@ export default function Tick3tStaffPage() {
           title: 'Saved offline',
           detail: err instanceof Error ? err.message : 'Could not reach server — queued locally',
         });
+        playTone('warn');
       } finally {
         setScanBusy(false);
       }
     },
-    [merchantId, refreshQueueCount],
+    [merchantId, refreshQueueCount, eventId],
   );
 
   if (authLoading) {
@@ -169,7 +227,7 @@ export default function Tick3tStaffPage() {
         <header className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold">Door check-in</h1>
-            <p className="mt-1 text-sm text-ink/55">Scan a Tick3t QR or enter the code manually.</p>
+            <p className="mt-1 text-sm text-ink/55">Camera stays on — keep scanning guests.</p>
           </div>
           <span
             className={cls(
@@ -182,10 +240,33 @@ export default function Tick3tStaffPage() {
           </span>
         </header>
 
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'In', value: String(sessionOk) },
+            { label: 'Rejected', value: String(sessionBad) },
+            { label: 'Queued', value: String(queued) },
+          ].map((s) => (
+            <div key={s.label} className="rounded-xl border border-black/10 bg-mist px-3 py-2 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">{s.label}</p>
+              <p className="mt-1 text-lg font-extrabold">{s.value}</p>
+            </div>
+          ))}
+        </div>
+
         {queued > 0 && (
-          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950">
-            {queued} scan{queued === 1 ? '' : 's'} waiting to sync
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950">
+            <span>
+              {queued} scan{queued === 1 ? '' : 's'} waiting to sync
+            </span>
+            <button
+              type="button"
+              disabled={!online || syncBusy}
+              onClick={() => void syncQueue()}
+              className="rounded-lg bg-amber-900 px-3 py-1.5 font-bold text-white disabled:opacity-40"
+            >
+              {syncBusy ? 'Syncing…' : 'Sync now'}
+            </button>
+          </div>
         )}
 
         <div className="space-y-3 rounded-2xl border border-black/10 bg-mist p-4">
@@ -205,16 +286,7 @@ export default function Tick3tStaffPage() {
               </select>
             </label>
           )}
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-ink/55">Merchant ID</span>
-            <input
-              value={merchantId}
-              onChange={(e) => setMerchantId(e.target.value.trim())}
-              placeholder="Merchant UUID"
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 font-mono text-xs outline-none focus:border-brand/50"
-            />
-          </label>
-          {events.length > 0 && (
+          {liveEvents.length > 0 && (
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-ink/55">Event context</span>
               <select
@@ -222,12 +294,30 @@ export default function Tick3tStaffPage() {
                 onChange={(e) => setEventId(e.target.value)}
                 className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand/50"
               >
-                {events.map((ev) => (
+                {liveEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
-                    {ev.title}
+                    {ev.title} · {ev.status.replace('_', ' ')}
                   </option>
                 ))}
               </select>
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="text-xs font-semibold text-ink/45 underline-offset-2 hover:underline"
+          >
+            {showAdvanced ? 'Hide advanced' : 'Advanced merchant ID'}
+          </button>
+          {showAdvanced && (
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-ink/55">Merchant ID</span>
+              <input
+                value={merchantId}
+                onChange={(e) => setMerchantId(e.target.value.trim())}
+                placeholder="Merchant UUID"
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 font-mono text-xs outline-none focus:border-brand/50"
+              />
             </label>
           )}
         </div>
@@ -245,9 +335,9 @@ export default function Tick3tStaffPage() {
             >
               <div className="flex items-start gap-2">
                 {feedback.tone === 'success' ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-700" />
                 ) : (
-                  <XCircle className="mt-0.5 h-5 w-5 text-red-400" />
+                  <XCircle className="mt-0.5 h-5 w-5 text-red-600" />
                 )}
                 <div>
                   <p className="font-bold">{feedback.title}</p>

@@ -566,6 +566,46 @@ export default function Tick3tOrganizerDashboard() {
 
             {tab === 'overview' && (
               <section className="space-y-4">
+                {(() => {
+                  const drafts = events.filter((e) => e.status === 'draft');
+                  const live = events.filter((e) => e.status === 'on_sale' || e.status === 'published');
+                  if (events.length === 0) {
+                    return (
+                      <div className="rounded-2xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm">
+                        <p className="font-bold">Get your first event live</p>
+                        <ol className="mt-2 list-decimal space-y-1 pl-5 text-ink/60">
+                          <li>Create an event workspace</li>
+                          <li>Add ticket types</li>
+                          <li>Put the event on sale and share the link</li>
+                        </ol>
+                        <button
+                          type="button"
+                          onClick={() => setTab('events')}
+                          className="mt-3 rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white"
+                        >
+                          Create event
+                        </button>
+                      </div>
+                    );
+                  }
+                  if (drafts.length > 0 && live.length === 0) {
+                    return (
+                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950">
+                        <p className="font-bold">{drafts.length} draft event{drafts.length === 1 ? '' : 's'} not selling yet</p>
+                        <p className="mt-1 text-ink/70">Add ticket types, then use Put on sale from the Events tab.</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => setTab('tickets')} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white">
+                            Ticket types
+                          </button>
+                          <button type="button" onClick={() => setTab('events')} className="rounded-lg border border-black/15 px-3 py-2 text-xs font-bold">
+                            Events
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {[
                     { label: 'Tickets sold', value: String(stats?.total_tickets ?? 0) },
@@ -586,6 +626,9 @@ export default function Tick3tOrganizerDashboard() {
                   <button type="button" onClick={() => setTab('events')} className="rounded-lg border border-black/15 px-3 py-2 text-xs font-bold">
                     Create event
                   </button>
+                  <Link to="/staff" className="rounded-lg border border-black/15 px-3 py-2 text-xs font-bold">
+                    Door scan
+                  </Link>
                 </div>
                 <ul className="space-y-2">
                   {events.slice(0, 5).map((ev) => (
