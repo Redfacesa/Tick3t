@@ -47,7 +47,7 @@ export default function Tick3tOrganizerRegisterPage() {
     }
     const token = await getSupabaseAccessToken();
     if (!token) {
-      toast.error('Your Pay session expired. Sign in again, then resubmit.');
+      toast.error('Your session expired. Sign in again, then resubmit.');
       navigate(`/login/sell?return_url=${encodeURIComponent('/organizer/register')}`);
       return;
     }
@@ -64,7 +64,7 @@ export default function Tick3tOrganizerRegisterPage() {
         raw === 'JWT expired' ||
         raw.toLowerCase().includes('invalid jwt');
       if (authFail) {
-        toast.error('Sign-in token was rejected. Sign in again via RedFace Pay, then resubmit.');
+        toast.error('Sign-in token was rejected. Sign in again, then resubmit.');
         navigate(`/login/sell?return_url=${encodeURIComponent('/organizer/register')}`);
         return;
       }
@@ -110,7 +110,8 @@ export default function Tick3tOrganizerRegisterPage() {
         <div className="rounded-2xl border border-black/10 bg-mist p-8 text-center">
           <h1 className="text-xl font-extrabold">Become an organizer</h1>
           <p className="mt-2 text-sm text-ink/55">
-            Sign in to apply. Settlements go to your RedFace Pay merchant account after approval.
+            Sign in on Tick3t to apply. Settlements go to your RedFace Pay merchant account after
+            approval — created automatically when you register.
           </p>
           <Link
             to={`/login/sell?return_url=${encodeURIComponent(returnUrl)}`}

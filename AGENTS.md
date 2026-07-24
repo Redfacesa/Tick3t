@@ -19,7 +19,7 @@ This file guides humans and AI agents working in the Tick3t repository.
 - Keep the Tick3t Vite app as the canonical UX for tick3t.online; avoid long-term drift with Pay-embedded copies when changing Tick3t behaviour.
 - Shared hub migrations live in the RedFace Pay repo (`supabase/migrations`). Apply them to the shared Supabase project; document the migration name in PRs.
 - Do not hardcode partner fee splits or platform percentages in the UI — fee logic belongs in the financial engine / merchant settings.
-- Auth: Clerk UI + Supabase session (SSO via RedFace Pay when needed). Platform admins are listed in `src/lib/tick3t/admins.ts` and hub `platform_ecosystem_apps`.
+- Auth: Clerk UI on Tick3t (shared hub via `clerk-link`) + Pay ecosystem SSO fallback. Platform admins are listed in `src/lib/tick3t/admins.ts` and hub `platform_ecosystem_apps`.
 
 ## Code style
 

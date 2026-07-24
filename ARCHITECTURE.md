@@ -32,8 +32,10 @@ flowchart LR
 
 ## Identity
 
-- Clerk for UI auth (when configured).
-- Supabase Auth session for RPCs (SSO from RedFace Pay when returning with tokens).
+- **Primary:** Clerk signup/sign-in stays on Tick3t (`VITE_CLERK_PUBLISHABLE_KEY`).
+- `clerk-link` finds/creates the shared hub `auth.users` row and `auth_identity_links`.
+- Organizer/venue register creates a RedFace `merchants` row (`signup_vertical = tick3t`) in the same DB — no second Pay signup.
+- **Fallback:** RedFace Pay ecosystem SSO when Clerk is not configured (or via “Prefer RedFace Pay sign-in”).
 - Organizers map to `tick3t_organizers` ↔ `merchants`.
 - Platform admins: `platform_ecosystem_apps.admin_emails` + `src/lib/tick3t/admins.ts`.
 

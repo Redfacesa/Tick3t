@@ -17,6 +17,7 @@ type Props = {
 
 /**
  * Wires Clerk session tokens into Supabase and mirrors Clerk sign-in into AuthContext.
+ * Must render inside ClerkProvider and AuthProvider.
  */
 export default function ClerkSupabaseBridge({ onSession, onBootstrapComplete }: Props) {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -38,6 +39,7 @@ export default function ClerkSupabaseBridge({ onSession, onBootstrapComplete }: 
   useEffect(() => {
     registerClerkTokenGetter(async () => {
       if (!session) return null;
+      // Native Clerk ↔ Supabase third-party auth uses the session token directly.
       return session.getToken();
     });
     return () => registerClerkTokenGetter(null);
@@ -54,6 +56,7 @@ export default function ClerkSupabaseBridge({ onSession, onBootstrapComplete }: 
     const bridgeKey =
       isSignedIn && user?.id && email ? `${user.id}:${email.toLowerCase()}` : 'signed-out';
 
+    // Clerk refreshes session tokens on tab focus — don't re-bootstrap for that.
     if (lastBridgeKey.current === bridgeKey) return;
     lastBridgeKey.current = bridgeKey;
 
@@ -68,6 +71,11 @@ export default function ClerkSupabaseBridge({ onSession, onBootstrapComplete }: 
           if (linkedId && isSupabaseAuthUserId(String(linkedId))) {
             supabaseUserId = String(linkedId);
           }
+        }
+        if (!supabaseUserId) {
+          console.warn(
+            '[clerk-link] no Supabase user linked yet — retry after Clerk ↔ Supabase integration is enabled',
+          );
         }
         await onSessionRef.current({
           id: supabaseUserId ?? '',

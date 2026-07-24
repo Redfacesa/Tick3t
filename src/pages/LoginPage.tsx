@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import ClerkAuthButtons from '@/components/ClerkAuthButtons';
 import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
+import { isClerkEnabled } from '@/lib/clerkEnabled';
 import { checkTick3tIsAdmin } from '@/lib/tick3t/api';
 import { buildPayEcosystemLoginUrl, stripSsoParamsFromPath } from '@/lib/sso';
 
@@ -77,6 +79,7 @@ export default function LoginPage({ role }: { role: LoginRole }) {
   const [routing, setRouting] = useState(false);
   const returnPath = safeReturnPath(sp.get('return_url'), copy.defaultReturn);
   const dest = roleHome(role, returnPath);
+  const clerkEnabled = isClerkEnabled();
 
   const payLoginUrl = useMemo(() => buildPayEcosystemLoginUrl(dest), [dest]);
 
@@ -122,6 +125,19 @@ export default function LoginPage({ role }: { role: LoginRole }) {
 
         {loading ? (
           <p className="text-sm text-ink/45">Checking session…</p>
+        ) : clerkEnabled ? (
+          <>
+            <div className="w-full rounded-2xl border border-black/10 bg-mist p-5">
+              <ClerkAuthButtons prominent />
+            </div>
+            <p className="text-center text-xs text-ink/45">
+              You stay on Tick3t. Your account is also created in the shared RedFace Pay hub so
+              payouts work without a second signup.
+            </p>
+            <a href={payLoginUrl} className="text-center text-xs font-semibold text-ink/40 hover:text-ink/70">
+              Prefer RedFace Pay sign-in →
+            </a>
+          </>
         ) : (
           <>
             <a
@@ -131,7 +147,9 @@ export default function LoginPage({ role }: { role: LoginRole }) {
               Continue with RedFace Pay
             </a>
             <p className="text-center text-xs text-ink/45">
-              Sign in on RedFace Pay, then you return here automatically.
+              Sign in on RedFace Pay, then you return here automatically. Set{' '}
+              <code className="rounded bg-mist px-1">VITE_CLERK_PUBLISHABLE_KEY</code> to enable
+              on-site signup.
             </p>
           </>
         )}
