@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSupabaseAccessToken } from '@/lib/supabase';
 import { registerTick3tOrganizer } from '@/lib/tick3t/api';
 
 const inputClass =
@@ -44,6 +45,12 @@ export default function Tick3tOrganizerRegisterPage() {
       toast.error('Sign in to register as an organizer');
       return;
     }
+    const token = await getSupabaseAccessToken();
+    if (!token) {
+      toast.error('Your Pay session expired. Sign in again, then resubmit.');
+      navigate(`/login/sell?return_url=${encodeURIComponent('/organizer/register')}`);
+      return;
+    }
     setBusy(true);
     const result = await registerTick3tOrganizer({
       ...form,
@@ -51,8 +58,18 @@ export default function Tick3tOrganizerRegisterPage() {
     });
     setBusy(false);
     if (!result.ok) {
+      const raw = result.error || 'Registration failed';
+      const authFail =
+        /jwt|authorized|permission|401|403|not authenticated|session/i.test(raw) ||
+        raw === 'JWT expired' ||
+        raw.toLowerCase().includes('invalid jwt');
+      if (authFail) {
+        toast.error('Sign-in token was rejected. Sign in again via RedFace Pay, then resubmit.');
+        navigate(`/login/sell?return_url=${encodeURIComponent('/organizer/register')}`);
+        return;
+      }
       toast.error(
-        result.error === 'already_registered' ? 'You are already registered' : result.error || 'Registration failed',
+        result.error === 'already_registered' ? 'You are already registered' : raw,
       );
       if (result.error === 'already_registered') navigate('/organizer');
       return;

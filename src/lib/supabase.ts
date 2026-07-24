@@ -47,12 +47,25 @@ export async function signOutViaClerk(): Promise<void> {
   if (clerkSignOut) await clerkSignOut();
 }
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
 async function authedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = requestUrl(input);
   const headers = new Headers(init?.headers);
-  const token = await getSupabaseAccessToken();
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
+
+  // Never rewrite GoTrue Authorization — setSession / refresh must own those headers.
+  // Interfering here caused "Auth session missing!" during SSO.
+  if (!url.includes('/auth/v1/')) {
+    const token = await getSupabaseAccessToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
   }
+
   return fetch(input, { ...init, headers });
 }
 

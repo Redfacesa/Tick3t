@@ -50,10 +50,11 @@ export function stripSsoParamsFromPath(pathOrUrl: string): string {
       : `${tick3tReturnOrigin()}${pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`}`;
     const u = new URL(base);
     for (const key of SSO_PARAM_KEYS) u.searchParams.delete(key);
+    u.hash = '';
     if (pathOrUrl.startsWith('http')) return u.toString();
     return `${u.pathname}${u.search}${u.hash}` || '/';
   } catch {
-    return pathOrUrl.split('?')[0] || '/';
+    return pathOrUrl.split('?')[0]?.split('#')[0] || '/';
   }
 }
 
@@ -98,19 +99,44 @@ function readSsoParams(params: URLSearchParams): {
   };
 }
 
-function cleanUrlAfterSso(params: URLSearchParams, nestedReturn: URL | null) {
-  if (nestedReturn) {
-    for (const key of SSO_PARAM_KEYS) nestedReturn.searchParams.delete(key);
-    const clean =
-      nestedReturn.origin === window.location.origin
-        ? `${nestedReturn.pathname}${nestedReturn.search}${nestedReturn.hash}`
-        : nestedReturn.toString();
-    window.history.replaceState({}, '', clean || '/');
-    return;
-  }
+/** Merge query + hash SSO params (Pay now prefers hash for long JWTs). */
+function readSsoFromLocation(): {
+  accessToken: string | null;
+  refreshToken: string | null;
+  email: string;
+  userId: string;
+} {
+  const query = new URLSearchParams(window.location.search);
+  const hashRaw = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hash = new URLSearchParams(hashRaw);
+
+  const fromQuery = readSsoParams(query);
+  const fromHash = readSsoParams(hash);
+
+  return {
+    accessToken: fromHash.accessToken || fromQuery.accessToken,
+    refreshToken: fromHash.refreshToken || fromQuery.refreshToken,
+    email: fromHash.email || fromQuery.email,
+    userId: fromHash.userId || fromQuery.userId,
+  };
+}
+
+function looksLikeJwt(token: string): boolean {
+  const parts = token.split('.');
+  return parts.length === 3 && parts.every((p) => p.length > 0);
+}
+
+function cleanUrlAfterSso() {
+  const params = new URLSearchParams(window.location.search);
   for (const key of SSO_PARAM_KEYS) params.delete(key);
   const clean = params.toString();
-  window.history.replaceState({}, '', `${window.location.pathname}${clean ? `?${clean}` : ''}`);
+  window.history.replaceState(
+    {},
+    '',
+    `${window.location.pathname}${clean ? `?${clean}` : ''}`,
+  );
 }
 
 /**
@@ -118,6 +144,7 @@ function cleanUrlAfterSso(params: URLSearchParams, nestedReturn: URL | null) {
  * Supports:
  * - Native Supabase pair (access + refresh) via setSession
  * - Clerk/Pay access_token-only via satellite session storage (fixes sell-login loop)
+ * Tokens may arrive in the hash (preferred) or query (legacy).
  */
 export async function applyPaySsoTokensFromUrl(): Promise<{ email: string; userId: string } | null> {
   if (typeof window === 'undefined') return null;
@@ -131,20 +158,27 @@ export async function applyPaySsoTokensFromUrl(): Promise<{ email: string; userI
     return null;
   }
 
-  const params = new URLSearchParams(window.location.search);
-  let sso = readSsoParams(params);
-  let nestedReturn: URL | null = null;
+  let sso = readSsoFromLocation();
 
+  // Legacy: tokens nested inside return_url query
   if (!sso.accessToken) {
-    const nested = params.get('return_url');
+    const nested = new URLSearchParams(window.location.search).get('return_url');
     if (nested) {
       try {
         const nestedUrl = new URL(nested, window.location.origin);
-        const nestedSso = readSsoParams(nestedUrl.searchParams);
-        if (nestedSso.accessToken) {
-          sso = nestedSso;
-          nestedReturn = nestedUrl;
-        }
+        const nestedHash = new URLSearchParams(
+          nestedUrl.hash.startsWith('#') ? nestedUrl.hash.slice(1) : nestedUrl.hash,
+        );
+        const nestedSso = {
+          ...readSsoParams(nestedUrl.searchParams),
+          accessToken:
+            readSsoParams(nestedHash).accessToken || readSsoParams(nestedUrl.searchParams).accessToken,
+          refreshToken:
+            readSsoParams(nestedHash).refreshToken || readSsoParams(nestedUrl.searchParams).refreshToken,
+          email: readSsoParams(nestedHash).email || readSsoParams(nestedUrl.searchParams).email,
+          userId: readSsoParams(nestedHash).userId || readSsoParams(nestedUrl.searchParams).userId,
+        };
+        if (nestedSso.accessToken) sso = nestedSso;
       } catch {
         /* ignore */
       }
@@ -153,14 +187,22 @@ export async function applyPaySsoTokensFromUrl(): Promise<{ email: string; userI
 
   if (!sso.accessToken) return null;
 
-  // Preferred: full Supabase session from Pay (non-Clerk or hybrid).
+  if (!looksLikeJwt(sso.accessToken)) {
+    console.error(
+      '[tick3t] SSO access_token is truncated or invalid (not a JWT). Sign in again from RedFace Pay.',
+    );
+    cleanUrlAfterSso();
+    return null;
+  }
+
+  // Preferred: full Supabase session from Pay (non-Clerk).
   if (sso.refreshToken) {
     const { data, error } = await supabase.auth.setSession({
       access_token: sso.accessToken,
       refresh_token: sso.refreshToken,
     });
     if (!error && data.session?.user) {
-      cleanUrlAfterSso(params, nestedReturn);
+      cleanUrlAfterSso();
       return {
         email: data.session.user.email || sso.email,
         userId: data.session.user.id,
@@ -177,6 +219,7 @@ export async function applyPaySsoTokensFromUrl(): Promise<{ email: string; userI
   const userId = sso.userId || '';
   if (!email) {
     console.error('[tick3t] SSO access_token present but email missing — cannot establish identity');
+    cleanUrlAfterSso();
     return null;
   }
 
@@ -185,7 +228,7 @@ export async function applyPaySsoTokensFromUrl(): Promise<{ email: string; userI
     email,
     userId: userId || email,
   });
-  cleanUrlAfterSso(params, nestedReturn);
+  cleanUrlAfterSso();
 
   return { email, userId: userId || email };
 }

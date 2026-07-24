@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { clearSatelliteSession, getSatelliteUser } from '@/lib/satelliteSession';
 import { applyPaySsoTokensFromUrl } from '@/lib/sso';
 import { hasSupabaseConfig, supabase } from '@/lib/supabase';
+import { fetchTick3tOrganizerMe } from '@/lib/tick3t/api';
 
 export type AuthUser = {
   id: string;
@@ -33,14 +34,17 @@ const Ctx = createContext<AuthState>({
 
 export const useAuth = () => useContext(Ctx);
 
-async function resolveMerchant(email: string): Promise<AuthMerchant | null> {
-  const { data } = await supabase
-    .from('merchants')
-    .select('id, business_name, email')
-    .ilike('email', email)
-    .maybeSingle();
-  if (!data?.id) return null;
-  return data as AuthMerchant;
+/** Prefer organizer RPC — direct merchants table reads 401 under Clerk satellite JWTs. */
+async function resolveMerchant(_email: string): Promise<AuthMerchant | null> {
+  const organizer = await fetchTick3tOrganizerMe();
+  if (organizer?.merchant_id) {
+    return {
+      id: organizer.merchant_id,
+      business_name: organizer.company_name,
+      email: organizer.email || _email,
+    };
+  }
+  return null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
