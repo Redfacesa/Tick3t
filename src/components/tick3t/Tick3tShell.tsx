@@ -1,8 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { REDFACE_PAY_ORIGIN } from '@/lib/company';
-import { checkTick3tIsAdmin } from '@/lib/tick3t/api';
 import { cls } from '@/lib/format';
 
 const NAV = [
@@ -10,21 +9,13 @@ const NAV = [
   { to: '/#events', label: 'Events', end: false, hash: true },
   { to: '/tickets', label: 'My tickets' },
   { to: '/organizer', label: 'Sell' },
+  { to: '/venue', label: 'Venues' },
 ];
 
 export default function Tick3tShell({ children }: { children?: ReactNode }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
   const isHome = location.pathname === '/';
-
-  useEffect(() => {
-    if (!user) {
-      setIsAdmin(false);
-      return;
-    }
-    void checkTick3tIsAdmin(user.email).then(setIsAdmin);
-  }, [user]);
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-ink">
@@ -72,19 +63,6 @@ export default function Tick3tShell({ children }: { children?: ReactNode }) {
                 </NavLink>
               );
             })}
-            {isAdmin && (
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  cls(
-                    'shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm',
-                    isActive ? 'bg-brand/10 text-brand' : 'text-ink/55 hover:text-ink',
-                  )
-                }
-              >
-                Admin
-              </NavLink>
-            )}
             {user ? (
               <button
                 type="button"

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
+import { ImageGalleryField, ImageUploadField } from '@/components/tick3t/ImageUploadField';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadFile } from '@/lib/download';
 import { fmtMoney } from '@/lib/format';
@@ -48,6 +49,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'profile', label: 'Profile' },
 ];
 
+function parseGallery(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((u): u is string => typeof u === 'string' && u.length > 0).slice(0, 5);
+}
+
 const emptyEventForm = {
   id: '',
   title: '',
@@ -70,8 +76,8 @@ const emptyEventForm = {
   website_url: '',
   instagram_url: '',
   facebook_url: '',
-  hero_image_url: '',
   poster_image_url: '',
+  gallery: [] as string[],
   status: 'draft' as string,
 };
 
@@ -218,8 +224,8 @@ export default function Tick3tOrganizerDashboard() {
       website_url: ev.website_url || '',
       instagram_url: ev.instagram_url || '',
       facebook_url: ev.facebook_url || '',
-      hero_image_url: ev.hero_image_url || '',
-      poster_image_url: ev.poster_image_url || '',
+      poster_image_url: ev.poster_image_url || ev.hero_image_url || '',
+      gallery: parseGallery(ev.gallery),
       status: ev.status,
     });
     setTab('events');
@@ -236,6 +242,10 @@ export default function Tick3tOrganizerDashboard() {
         .replace(/^-|-$/g, '');
     if (!eventForm.title.trim() || !slug) {
       toast.error('Title is required');
+      return;
+    }
+    if (!eventForm.poster_image_url.trim()) {
+      toast.error('Event poster is required');
       return;
     }
     setSaving(true);
@@ -261,8 +271,9 @@ export default function Tick3tOrganizerDashboard() {
       website_url: eventForm.website_url || null,
       instagram_url: eventForm.instagram_url || null,
       facebook_url: eventForm.facebook_url || null,
-      hero_image_url: eventForm.hero_image_url || null,
+      hero_image_url: eventForm.poster_image_url || null,
       poster_image_url: eventForm.poster_image_url || null,
+      gallery: eventForm.gallery,
       status: eventForm.status as Tick3tEvent['status'],
     } as Partial<Tick3tEvent> & { slug: string; title: string });
     setSaving(false);
@@ -298,6 +309,7 @@ export default function Tick3tOrganizerDashboard() {
       if (!ev.slug?.trim()) missing.push('slug');
       if (!ev.event_date) missing.push('event date');
       if (!ev.venue?.trim() && !ev.city?.trim()) missing.push('venue or city');
+      if (!ev.poster_image_url?.trim() && !ev.hero_image_url?.trim()) missing.push('event poster');
       const types = await fetchTick3tTicketTypes(organizer.merchant_id, ev.id);
       const sellable = types.some((t) => t.status === 'on_sale');
       if (!sellable) missing.push('at least one on-sale ticket type');
@@ -755,11 +767,21 @@ export default function Tick3tOrganizerDashboard() {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Story & media</p>
                   <textarea className={inputClass} rows={3} placeholder="Description" value={eventForm.description} onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))} />
                   <textarea className={inputClass} rows={2} placeholder="Lineup" value={eventForm.lineup} onChange={(e) => setEventForm((f) => ({ ...f, lineup: e.target.value }))} />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <input className={inputClass} placeholder="Hero image URL" value={eventForm.hero_image_url} onChange={(e) => setEventForm((f) => ({ ...f, hero_image_url: e.target.value }))} />
-                    <input className={inputClass} placeholder="Poster image URL" value={eventForm.poster_image_url} onChange={(e) => setEventForm((f) => ({ ...f, poster_image_url: e.target.value }))} />
-                    <input className={`${inputClass} sm:col-span-2`} placeholder="Maps URL" value={eventForm.maps_url} onChange={(e) => setEventForm((f) => ({ ...f, maps_url: e.target.value }))} />
-                  </div>
+                  <ImageUploadField
+                    label="Event poster"
+                    required
+                    value={eventForm.poster_image_url}
+                    folder="events"
+                    onChange={(url) => setEventForm((f) => ({ ...f, poster_image_url: url }))}
+                  />
+                  <ImageGalleryField
+                    label="Event gallery"
+                    urls={eventForm.gallery}
+                    max={5}
+                    folder="events"
+                    onChange={(gallery) => setEventForm((f) => ({ ...f, gallery }))}
+                  />
+                  <input className={inputClass} placeholder="Maps URL" value={eventForm.maps_url} onChange={(e) => setEventForm((f) => ({ ...f, maps_url: e.target.value }))} />
 
                   <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Policies & contact</p>
                   <textarea className={inputClass} rows={2} placeholder="Terms" value={eventForm.terms} onChange={(e) => setEventForm((f) => ({ ...f, terms: e.target.value }))} />

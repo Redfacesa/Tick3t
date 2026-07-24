@@ -9,6 +9,7 @@ const Tick3tEventPage = lazy(() => import('@/pages/Tick3tEventPage'));
 const Tick3tTicketsPage = lazy(() => import('@/pages/Tick3tTicketsPage'));
 const Tick3tOrganizerRegisterPage = lazy(() => import('@/pages/Tick3tOrganizerRegisterPage'));
 const Tick3tOrganizerDashboard = lazy(() => import('@/pages/Tick3tOrganizerDashboard'));
+const Tick3tVenueDashboard = lazy(() => import('@/pages/Tick3tVenueDashboard'));
 const Tick3tStaffPage = lazy(() => import('@/pages/Tick3tStaffPage'));
 const Tick3tAdminPage = lazy(() => import('@/pages/Tick3tAdminPage'));
 const LoginGatewayPage = lazy(() => import('@/pages/LoginGatewayPage'));
@@ -37,6 +38,10 @@ function BuyLogin() {
   return <LoginPage role="buy" />;
 }
 
+function VenueLogin() {
+  return <LoginPage role="venue" />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -53,6 +58,7 @@ export default function App() {
               <Route path="organizer/register" element={<Tick3tOrganizerRegisterPage />} />
               <Route path="organizer" element={<Tick3tOrganizerDashboard />} />
               <Route path="organizer/events" element={<Tick3tOrganizerDashboard />} />
+              <Route path="venue" element={<Tick3tVenueDashboard />} />
               <Route path="staff" element={<Tick3tStaffPage />} />
               <Route path="checkin" element={<Tick3tStaffPage />} />
               <Route path="admin" element={<Tick3tAdminPage />} />
@@ -60,6 +66,7 @@ export default function App() {
               <Route path="login/admin" element={<AdminLogin />} />
               <Route path="login/sell" element={<SellLogin />} />
               <Route path="login/buy" element={<BuyLogin />} />
+              <Route path="login/venue" element={<VenueLogin />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

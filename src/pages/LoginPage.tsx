@@ -6,29 +6,39 @@ import { useAuth } from '@/contexts/AuthContext';
 import { checkTick3tIsAdmin } from '@/lib/tick3t/api';
 import { buildPayEcosystemLoginUrl, stripSsoParamsFromPath } from '@/lib/sso';
 
-export type LoginRole = 'admin' | 'sell' | 'buy';
+export type LoginRole = 'admin' | 'sell' | 'buy' | 'venue';
 
 const ROLE_COPY: Record<
   LoginRole,
-  { title: string; description: string; defaultReturn: string; path: string }
+  { title: string; description: string; defaultReturn: string; path: string; badge: string }
 > = {
   admin: {
     title: 'Admin sign in',
     description: 'Platform access for RedFace Pay and Entendre co-owners.',
     defaultReturn: '/admin',
     path: '/login/admin',
+    badge: 'Platform',
   },
   sell: {
-    title: 'Seller sign in',
+    title: 'Organizer sign in',
     description: 'Create events, sell tickets, and run door check-in.',
     defaultReturn: '/organizer',
     path: '/login/sell',
+    badge: 'Organizer',
   },
   buy: {
-    title: 'Ticket wallet',
+    title: 'My Tickets',
     description: 'Sign in to view tickets bought with your email.',
     defaultReturn: '/tickets',
     path: '/login/buy',
+    badge: 'Guest',
+  },
+  venue: {
+    title: 'Venue sign in',
+    description: 'List your space, set pricing, and manage venue photos.',
+    defaultReturn: '/venue',
+    path: '/login/venue',
+    badge: 'Venue',
   },
 };
 
@@ -52,6 +62,9 @@ function roleHome(role: LoginRole, returnPath: string): string {
   if (role === 'admin') return returnPath.startsWith('/admin') ? returnPath : '/admin';
   if (role === 'sell') {
     return returnPath.startsWith('/organizer') || returnPath.startsWith('/staff') ? returnPath : '/organizer';
+  }
+  if (role === 'venue') {
+    return returnPath.startsWith('/venue') ? returnPath : '/venue';
   }
   return returnPath.startsWith('/tickets') ? returnPath : '/tickets';
 }
@@ -95,9 +108,7 @@ export default function LoginPage({ role }: { role: LoginRole }) {
       <PageSeo title={copy.title} description={copy.description} path={copy.path} noindex />
       <div className="mx-auto flex max-w-md flex-col items-center gap-6 py-4">
         <header className="w-full text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
-            {role === 'admin' ? 'Platform' : role === 'sell' ? 'Organizer' : 'Guest'}
-          </p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">{copy.badge}</p>
           <h1 className="mt-2 font-display text-2xl font-extrabold text-ink">{copy.title}</h1>
           <p className="mt-2 text-sm text-ink/55">{copy.description}</p>
         </header>

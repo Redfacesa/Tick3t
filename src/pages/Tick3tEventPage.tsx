@@ -196,6 +196,23 @@ export default function Tick3tEventPage() {
           />
         )}
 
+        {Array.isArray(event.gallery) &&
+          event.gallery.filter((u): u is string => typeof u === 'string').length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-bold">Gallery</h2>
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+                {(event.gallery as unknown[])
+                  .filter((u): u is string => typeof u === 'string' && u.length > 0)
+                  .slice(0, 5)
+                  .map((url) => (
+                    <li key={url} className="overflow-hidden rounded-xl border border-black/10">
+                      <img src={url} alt="" className="aspect-square w-full object-cover" />
+                    </li>
+                  ))}
+              </ul>
+            </section>
+          )}
+
         <header className="space-y-2">
           <h1 className="text-2xl font-extrabold sm:text-3xl">{event.title}</h1>
           <p className="text-sm text-ink/55">

@@ -242,3 +242,28 @@ export type Tick3tOrganizerRegisterPayload = {
   business_reg?: string;
   logo_url?: string;
 };
+
+export type Tick3tVenue = {
+  id: string;
+  auth_user_id: string | null;
+  owner_email: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  country: string;
+  capacity: number | null;
+  cover_image_url: string | null;
+  photos: unknown;
+  base_price_zar: number | null;
+  pricing_notes: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  website_url: string | null;
+  status: 'draft' | 'published' | 'archived';
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};

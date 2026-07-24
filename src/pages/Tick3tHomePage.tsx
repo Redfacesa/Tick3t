@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Search, Ticket } from 'lucide-react';
+import { ArrowRight, Building2, Search, Ticket } from 'lucide-react';
 import PageSeo from '@/components/PageSeo';
 import { fetchPublicTick3tEvents } from '@/lib/tick3t/api';
 import type { Tick3tPublicEvent } from '@/lib/tick3t/types';
@@ -33,7 +33,7 @@ export default function Tick3tHomePage() {
     <>
       <PageSeo
         title="Tick3t"
-        description="The easiest way in Africa to create, manage and sell tickets for any event."
+        description="Sell tickets. Discover events. Book venues. Africa’s event operating system."
         path="/"
       />
 
@@ -55,24 +55,24 @@ export default function Tick3tHomePage() {
         <div className="relative mx-auto flex min-h-[calc(100vh-4.5rem)] max-w-6xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 sm:py-20">
           <img
             src="/tick3t/lockup.png"
-            alt="Tick3t — Buy tickets online"
+            alt="Tick3t"
             className="tick3t-rise h-auto w-full max-w-[280px] object-contain sm:max-w-[360px]"
             onError={(e) => {
               e.currentTarget.src = '/tick3t/wordmark.png';
             }}
           />
-          <p className="tick3t-rise-delay mt-8 max-w-md font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-            Tickets that move as fast as the night.
+          <p className="tick3t-rise-delay mt-8 max-w-lg font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            Sell tickets. Discover events. Book venues.
           </p>
           <p className="tick3t-rise-delay-2 mt-3 max-w-lg text-sm text-ink/55 sm:text-base">
-            Create, manage and sell for any event across Africa — paid securely through RedFace Pay.
+            Africa’s event operating system — paid securely through RedFace Pay.
           </p>
           <div className="tick3t-rise-delay-2 mt-8 flex flex-wrap items-center justify-center gap-3">
             <a
               href="#events"
               className="inline-flex min-h-[48px] items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white transition hover:bg-brand/90"
             >
-              Browse events
+              Buy tickets
               <ArrowRight className="h-4 w-4" />
             </a>
             <Link
@@ -81,6 +81,13 @@ export default function Tick3tHomePage() {
             >
               <Ticket className="h-4 w-4 text-brand" />
               Sell tickets
+            </Link>
+            <Link
+              to="/login/venue"
+              className="inline-flex min-h-[48px] items-center gap-2 rounded-xl border border-ink/15 bg-white px-5 py-3 text-sm font-bold text-ink transition hover:border-ink/30"
+            >
+              <Building2 className="h-4 w-4 text-brand" />
+              List venue
             </Link>
           </div>
         </div>
@@ -91,7 +98,7 @@ export default function Tick3tHomePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-                Live events
+                Discover
               </h2>
               <p className="mt-1 text-sm text-ink/55">Find a night out. Pay once. Show your QR at the door.</p>
             </div>
@@ -168,6 +175,50 @@ export default function Tick3tHomePage() {
               </ul>
             )}
           </div>
+        </div>
+      </section>
+
+      <section id="venues" className="scroll-mt-24 border-t border-black/8 bg-mist py-14 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            List your venue
+          </h2>
+          <p className="mt-2 max-w-xl text-sm text-ink/55">
+            Build your venue profile now — photos, pricing, and contact details — so organizers can find
+            you when bookings go live.
+          </p>
+          <Link
+            to="/login/venue"
+            className="mt-6 inline-flex min-h-[48px] items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white transition hover:bg-ink/90"
+          >
+            <Building2 className="h-4 w-4" />
+            Open venue dashboard
+          </Link>
+        </div>
+      </section>
+
+      <section id="why" className="scroll-mt-24 bg-white py-14 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            Why Tick3t
+          </h2>
+          <p className="mt-2 max-w-xl text-sm text-ink/55">
+            One place for attendees, organizers, and venues — with money movement handled by RedFace Pay.
+          </p>
+          <ul className="mt-8 grid gap-6 sm:grid-cols-3">
+            <li>
+              <p className="font-bold text-ink">Attendees</p>
+              <p className="mt-1 text-sm text-ink/55">Discover events and keep tickets in one wallet.</p>
+            </li>
+            <li>
+              <p className="font-bold text-ink">Organizers</p>
+              <p className="mt-1 text-sm text-ink/55">Sell tickets, run the door, and track sales.</p>
+            </li>
+            <li>
+              <p className="font-bold text-ink">Venue owners</p>
+              <p className="mt-1 text-sm text-ink/55">List inventory early for the venue marketplace.</p>
+            </li>
+          </ul>
         </div>
       </section>
     </>

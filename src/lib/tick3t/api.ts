@@ -16,6 +16,7 @@ import type {
   Tick3tStaffAssignment,
   Tick3tTicket,
   Tick3tTicketType,
+  Tick3tVenue,
 } from '@/lib/tick3t/types';
 
 export async function fetchTick3tEvents(merchantId: string): Promise<Tick3tEvent[]> {
@@ -454,4 +455,19 @@ export function isTicketTypeOnSale(tt: Tick3tTicketType, now = new Date()): bool
   if (tt.sale_opens_at && new Date(tt.sale_opens_at) > now) return false;
   if (tt.sale_closes_at && new Date(tt.sale_closes_at) < now) return false;
   return true;
+}
+
+export async function fetchTick3tVenuesMine(): Promise<Tick3tVenue[]> {
+  const { data, error } = await supabase.rpc('tick3t_venues_mine');
+  if (error || !data?.ok) return [];
+  return (data.venues ?? []) as Tick3tVenue[];
+}
+
+export async function upsertTick3tVenue(
+  payload: Partial<Tick3tVenue> & { name: string; slug?: string },
+): Promise<{ venueId: string | null; error?: string }> {
+  const { data, error } = await supabase.rpc('tick3t_venue_upsert', { p_payload: payload });
+  if (error) return { venueId: null, error: error.message };
+  if (!data?.ok) return { venueId: null, error: data?.message || 'Could not save venue' };
+  return { venueId: data.venue_id as string };
 }
