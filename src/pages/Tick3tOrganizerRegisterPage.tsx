@@ -56,8 +56,8 @@ export default function Tick3tOrganizerRegisterPage() {
       ...form,
       email: form.email.trim() || user.email,
     });
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       const raw = result.error || 'Registration failed';
       const authFail =
         /jwt|authorized|permission|401|403|not authenticated|session/i.test(raw) ||
@@ -74,7 +74,23 @@ export default function Tick3tOrganizerRegisterPage() {
       if (result.error === 'already_registered') navigate('/organizer');
       return;
     }
-    toast.success('Application submitted. We will review it shortly.');
+
+    if (result.merchantId && result.needsSubaccount !== false) {
+      const { provisionTick3tMerchantSubaccount } = await import('@/lib/tick3t/provision');
+      const sub = await provisionTick3tMerchantSubaccount(result.merchantId);
+      setBusy(false);
+      if (sub.ok && sub.subaccount) {
+        toast.success(`Merchant ready. Paystack subaccount ${sub.subaccount}`);
+      } else if (sub.ok) {
+        toast.success('Organizer registered. Payouts will use platform settlement.');
+      } else {
+        toast.success('Organizer registered as a RedFace Pay merchant.');
+        toast.error(sub.message || 'Could not create Paystack subaccount yet — enable payouts from Finance.');
+      }
+    } else {
+      setBusy(false);
+      toast.success('Organizer registered. You can create events.');
+    }
     navigate('/organizer');
   };
 
@@ -118,7 +134,8 @@ export default function Tick3tOrganizerRegisterPage() {
         <header>
           <h1 className="text-2xl font-extrabold">Organizer registration</h1>
           <p className="mt-1 text-sm text-ink/55">
-            Tell us about your company and payout bank. Approval unlocks event creation and ticket sales.
+            Create your Tick3t organizer account. We also create your RedFace Pay merchant and Paystack
+            subaccount so ticket sales can settle to your bank.
           </p>
         </header>
 
@@ -154,8 +171,8 @@ export default function Tick3tOrganizerRegisterPage() {
           <Field label="Country">
             <input className={inputClass} value={form.country} onChange={(e) => set('country', e.target.value)} />
           </Field>
-          <Field label="ID / passport number">
-            <input className={inputClass} value={form.id_number} onChange={(e) => set('id_number', e.target.value)} />
+          <Field label="ID / passport number" required>
+            <input className={inputClass} value={form.id_number} onChange={(e) => set('id_number', e.target.value)} required />
           </Field>
           <Field label="Business registration">
             <input
@@ -169,22 +186,24 @@ export default function Tick3tOrganizerRegisterPage() {
           <Field label="Bank name">
             <input className={inputClass} value={form.bank_name} onChange={(e) => set('bank_name', e.target.value)} />
           </Field>
-          <Field label="Account holder">
+          <Field label="Account holder" required>
             <input
               className={inputClass}
               value={form.account_holder}
               onChange={(e) => set('account_holder', e.target.value)}
+              required
             />
           </Field>
-          <Field label="Account number">
+          <Field label="Account number" required>
             <input
               className={inputClass}
               value={form.account_number}
               onChange={(e) => set('account_number', e.target.value)}
+              required
             />
           </Field>
-          <Field label="Branch / bank code">
-            <input className={inputClass} value={form.bank_code} onChange={(e) => set('bank_code', e.target.value)} />
+          <Field label="Branch / bank code" required>
+            <input className={inputClass} value={form.bank_code} onChange={(e) => set('bank_code', e.target.value)} required />
           </Field>
 
           <button

@@ -9,6 +9,7 @@ This file guides humans and AI agents working in the Tick3t repository.
 3. **Tick3t** owns event operations. **RedFace Pay** owns money movement.
 4. Never reimplement Paystack, wallets, settlements, or merchant KYC inside Tick3t.
 5. Prefer consuming RedFace Pay APIs / `/pay` checkout / shared Supabase RPCs.
+6. Every organizer or venue owner is a RedFace Pay merchant with their own Paystack subaccount (`ACCT_…`). Never assign the platform settlement account to a third-party seller.
 
 ## Implementation rules
 

@@ -7,6 +7,11 @@ import { ImageGalleryField, ImageUploadField } from '@/components/tick3t/ImageUp
 import { useAuth } from '@/contexts/AuthContext';
 import { fmtMoney } from '@/lib/format';
 import { fetchTick3tVenuesMine, upsertTick3tVenue } from '@/lib/tick3t/api';
+import {
+  fetchTick3tMerchantCommerceStatus,
+  provisionTick3tMerchantSubaccount,
+  type Tick3tCommerceStatus,
+} from '@/lib/tick3t/provision';
 import type { Tick3tVenue } from '@/lib/tick3t/types';
 
 const inputClass =
@@ -52,6 +57,11 @@ function emptyForm(email = '') {
     contact_phone: '',
     website_url: '',
     status: 'draft' as string,
+    bank_name: '',
+    account_holder: '',
+    account_number: '',
+    bank_code: '',
+    merchant_id: '',
   };
 }
 
@@ -68,6 +78,7 @@ export default function Tick3tVenueDashboard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => emptyForm(user?.email || ''));
+  const [commerce, setCommerce] = useState<Tick3tCommerceStatus | null>(null);
 
   const setTab = (next: Tab) => {
     const nextSp = new URLSearchParams(sp);
@@ -79,9 +90,17 @@ export default function Tick3tVenueDashboard() {
     setLoading(true);
     const list = await fetchTick3tVenuesMine();
     setVenues(list);
+    const merchantId = list[0]?.merchant_id || null;
+    const commerceStatus = merchantId ? await fetchTick3tMerchantCommerceStatus(merchantId) : null;
+    setCommerce(commerceStatus);
     setLoading(false);
     setForm((prev) => {
-      if (prev.id || !list[0]) return prev;
+      if (prev.id || !list[0]) {
+        if (list[0]?.merchant_id) {
+          return { ...prev, merchant_id: list[0].merchant_id || prev.merchant_id };
+        }
+        return prev;
+      }
       const v = list[0];
       return {
         id: v.id,
@@ -101,6 +120,11 @@ export default function Tick3tVenueDashboard() {
         contact_phone: v.contact_phone || '',
         website_url: v.website_url || '',
         status: v.status,
+        bank_name: '',
+        account_holder: '',
+        account_number: '',
+        bank_code: '',
+        merchant_id: v.merchant_id || '',
       };
     });
   }, [user?.email]);
@@ -135,7 +159,7 @@ export default function Tick3tVenueDashboard() {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
-    const { venueId, error } = await upsertTick3tVenue({
+    const { venueId, merchantId, needsSubaccount, error } = await upsertTick3tVenue({
       ...(form.id ? { id: form.id } : {}),
       name: form.name.trim(),
       slug,
@@ -153,14 +177,27 @@ export default function Tick3tVenueDashboard() {
       contact_phone: form.contact_phone || null,
       website_url: form.website_url || null,
       status: form.status as Tick3tVenue['status'],
+      bank_name: form.bank_name || null,
+      bank_code: form.bank_code || null,
+      bank_account: form.account_number || null,
+      account_name: form.account_holder || null,
     });
-    setSaving(false);
     if (!venueId) {
+      setSaving(false);
       toast.error(error || 'Could not save venue');
       return;
     }
-    toast.success(form.id ? 'Venue saved' : 'Venue created');
-    setForm((f) => ({ ...f, id: venueId, slug }));
+
+    let payoutMsg = '';
+    if (merchantId && needsSubaccount) {
+      const sub = await provisionTick3tMerchantSubaccount(merchantId);
+      if (sub.ok && sub.subaccount) payoutMsg = ` · Subaccount ${sub.subaccount}`;
+      else if (!sub.ok) toast.error(sub.message || 'Venue saved; payouts still need a Paystack subaccount');
+    }
+
+    setSaving(false);
+    toast.success((form.id ? 'Venue saved' : 'Venue created') + payoutMsg);
+    setForm((f) => ({ ...f, id: venueId, slug, merchant_id: merchantId || f.merchant_id }));
     await reload();
   };
 
@@ -359,6 +396,44 @@ export default function Tick3tVenueDashboard() {
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 />
+                {tab === 'profile' && (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                      Settlement (RedFace Pay merchant)
+                    </p>
+                    <p className="text-sm text-ink/55">
+                      {commerce?.can_receive_payouts
+                        ? `Payouts ready${commerce.paystack_subaccount ? ` · ${commerce.paystack_subaccount}` : ''}`
+                        : 'Saving with bank details creates your RedFace merchant and Paystack subaccount.'}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input
+                        className={inputClass}
+                        placeholder="Bank name"
+                        value={form.bank_name}
+                        onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
+                      />
+                      <input
+                        className={inputClass}
+                        placeholder="Account holder"
+                        value={form.account_holder}
+                        onChange={(e) => setForm((f) => ({ ...f, account_holder: e.target.value }))}
+                      />
+                      <input
+                        className={inputClass}
+                        placeholder="Account number"
+                        value={form.account_number}
+                        onChange={(e) => setForm((f) => ({ ...f, account_number: e.target.value }))}
+                      />
+                      <input
+                        className={inputClass}
+                        placeholder="Branch / bank code"
+                        value={form.bank_code}
+                        onChange={(e) => setForm((f) => ({ ...f, bank_code: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
 

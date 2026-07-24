@@ -84,7 +84,14 @@ export async function fetchPublicTick3tEvent(
 
 export async function registerTick3tOrganizer(
   payload: Tick3tOrganizerRegisterPayload,
-): Promise<{ ok: boolean; organizerId?: string; merchantId?: string; status?: string; error?: string }> {
+): Promise<{
+  ok: boolean;
+  organizerId?: string;
+  merchantId?: string;
+  status?: string;
+  needsSubaccount?: boolean;
+  error?: string;
+}> {
   const { data, error } = await supabase.rpc('tick3t_organizer_register', { p_payload: payload });
   if (error) return { ok: false, error: error.message };
   if (!data?.ok) return { ok: false, error: data?.message || 'Registration failed' };
@@ -93,6 +100,7 @@ export async function registerTick3tOrganizer(
     organizerId: data.organizer_id as string,
     merchantId: data.merchant_id as string,
     status: data.status as string,
+    needsSubaccount: Boolean(data.needs_subaccount),
   };
 }
 
@@ -122,6 +130,8 @@ export async function setTick3tOrganizerStatus(
   error?: string;
   merchantId?: string;
   needsSubaccount?: boolean;
+  isPlatformMerchant?: boolean;
+  paystackSubaccount?: string | null;
 }> {
   const { data, error } = await supabase.rpc('tick3t_admin_organizer_set_status', {
     p_organizer_id: organizerId,
@@ -135,6 +145,8 @@ export async function setTick3tOrganizerStatus(
     ok: true,
     merchantId: data.merchant_id as string | undefined,
     needsSubaccount: Boolean(data.needs_subaccount),
+    isPlatformMerchant: Boolean(data.is_platform_merchant),
+    paystackSubaccount: (data.paystack_subaccount as string | null | undefined) ?? null,
   };
 }
 
@@ -464,10 +476,28 @@ export async function fetchTick3tVenuesMine(): Promise<Tick3tVenue[]> {
 }
 
 export async function upsertTick3tVenue(
-  payload: Partial<Tick3tVenue> & { name: string; slug?: string },
-): Promise<{ venueId: string | null; error?: string }> {
+  payload: Partial<Tick3tVenue> & {
+    name: string;
+    slug?: string;
+    bank_code?: string | null;
+    bank_account?: string | null;
+    account_name?: string | null;
+    bank_name?: string | null;
+    account_number?: string | null;
+    account_holder?: string | null;
+  },
+): Promise<{
+  venueId: string | null;
+  merchantId?: string | null;
+  needsSubaccount?: boolean;
+  error?: string;
+}> {
   const { data, error } = await supabase.rpc('tick3t_venue_upsert', { p_payload: payload });
   if (error) return { venueId: null, error: error.message };
   if (!data?.ok) return { venueId: null, error: data?.message || 'Could not save venue' };
-  return { venueId: data.venue_id as string };
+  return {
+    venueId: data.venue_id as string,
+    merchantId: (data.merchant_id as string | undefined) ?? null,
+    needsSubaccount: Boolean(data.needs_subaccount),
+  };
 }

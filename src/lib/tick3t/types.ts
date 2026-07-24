@@ -247,6 +247,7 @@ export type Tick3tVenue = {
   id: string;
   auth_user_id: string | null;
   owner_email: string;
+  merchant_id?: string | null;
   name: string;
   slug: string;
   description: string | null;

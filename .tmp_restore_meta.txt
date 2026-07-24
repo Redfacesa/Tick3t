@@ -1,0 +1,6 @@
+project_id=bpzzgilwlkghgfkvkkxx
+name=redface-pay
+entrypoint=redface-pay/index.ts
+verify_jwt=False
+files=58
+sha256=71a1eef2335840f00258ff1c4d866fe87b917d889432106a04e1e54e6fa11f60

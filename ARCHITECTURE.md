@@ -44,18 +44,24 @@ Core tables:
 - `tick3t_events` — event workspace  
 - `tick3t_ticket_types` — SKUs (price, capacity, sale windows)  
 - `tick3t_organizers` — seller applications  
+- `tick3t_venues` — venue inventory (Phase 1 listing; bookings later)  
 - `tick3t_scan_log` — check-in audit  
 - `tick3t_staff` — door/ops roles (Phase 1)  
 - `tick3t_promo_codes` — discounts (Phase 1)  
 - `tick3t_refund_requests` — refund workflow (Phase 1)  
 - `merchant_event_tickets` — issued tickets (QR, status) — shared with Entendre  
+- Shared hub migration for commerce onboard: `0336_tick3t_merchant_commerce_onboard.sql` (RedFace Pay repo)  
 
 ## Commerce path
 
-1. Tick3t builds checkout URL: `REDFACE_PAY_ORIGIN/pay?ecosystem_from=tick3t&…`  
-2. Pay `init_payment` treats Tick3t lines as **ticket metadata**, not catalog products.  
-3. Paystack confirms → webhook / trigger → `issue_event_tickets_for_transaction`.  
-4. Buyer sees tickets on `/tickets`; door validates via `tick3t_validate_and_checkin`.
+1. Organizer / venue owner signs up on Tick3t → hub creates a **RedFace `merchants`** row (`signup_vertical = tick3t`).
+2. With bank details on file, Tick3t calls Pay `tick3t_provision_subaccount` → Paystack `ACCT_…` saved on that merchant (never the platform ACCT_ for third parties).
+3. Tick3t builds checkout URL: `REDFACE_PAY_ORIGIN/pay?ecosystem_from=tick3t&…`
+4. Pay `init_payment` treats Tick3t lines as **ticket metadata**, not catalog products, and **refuses** checkout if the seller cannot receive payouts.
+5. Paystack confirms → webhook / trigger → `issue_event_tickets_for_transaction`.
+6. Buyer sees tickets on `/tickets`; door validates via `tick3t_validate_and_checkin`.
+
+**Rule:** Tick3t is the experience; RedFace Pay is the commerce engine. Every seller is a Pay merchant with their own settlement route.
 
 ## Service boundaries
 

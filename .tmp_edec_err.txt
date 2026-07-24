@@ -1,0 +1,13 @@
+node:internal/modules/esm/translators:379
+    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };
+                                                                                ^
+
+TypeError: Cannot read properties of undefined (reading 'exports')
+    at cjsPreparseModuleExports (node:internal/modules/esm/translators:379:81)
+    at createCJSModuleWrap (node:internal/modules/esm/translators:273:35)
+    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:333:10)
+    at callTranslator (node:internal/modules/esm/loader:428:14)
+    at ModuleLoader.moduleProvider (node:internal/modules/esm/loader:434:30)
+    at async link (node:internal/modules/esm/module_job:87:21)
+
+Node.js v20.18.1

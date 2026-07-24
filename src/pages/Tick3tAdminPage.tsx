@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import PageSeo from '@/components/PageSeo';
 import { useAuth } from '@/contexts/AuthContext';
 import { fmtMoney } from '@/lib/format';
-import { supabase } from '@/lib/supabase';
 import {
   checkTick3tIsAdmin,
   fetchTick3tAdminDashboard,
@@ -19,21 +18,15 @@ import type { Tick3tAdminDashboard, Tick3tOrganizer, Tick3tOrganizerStatus } fro
 
 type AdminTab = 'overview' | 'organizers' | 'sales';
 
-async function provisionPaystackSubaccount(merchantId: string): Promise<{ ok: boolean; message?: string }> {
-  const { data, error } = await supabase.functions.invoke('redface-pay', {
-    body: { action: 'create_subaccount', merchant_id: merchantId },
-  });
-  if (error || !data?.status) {
-    let msg = data?.message || error?.message || 'Subaccount creation failed';
-    try {
-      const body = await (error as { context?: { json?: () => Promise<{ message?: string }> } })?.context?.json?.();
-      if (body?.message) msg = body.message;
-    } catch {
-      /* ignore */
-    }
-    return { ok: false, message: msg };
-  }
-  return { ok: true, message: data.subaccount ? `Subaccount ${data.subaccount}` : undefined };
+async function provisionPaystackSubaccount(merchantId: string): Promise<{ ok: boolean; message?: string; subaccount?: string | null }> {
+  const { provisionTick3tMerchantSubaccount } = await import('@/lib/tick3t/provision');
+  const sub = await provisionTick3tMerchantSubaccount(merchantId);
+  if (!sub.ok) return { ok: false, message: sub.message };
+  return {
+    ok: true,
+    subaccount: sub.subaccount,
+    message: sub.subaccount ? `Subaccount ${sub.subaccount}` : 'Payouts ready (platform settlement)',
+  };
 }
 
 export default function Tick3tAdminPage() {
@@ -102,15 +95,23 @@ export default function Tick3tAdminPage() {
       return;
     }
 
-    if (status === 'approved' && result.needsSubaccount && result.merchantId) {
+    if (status === 'approved' && result.isPlatformMerchant) {
+      setBusyId(null);
+      toast.success('Organizer approved. Platform settlement (main Paystack account).');
+    } else if (status === 'approved' && result.needsSubaccount && result.merchantId) {
       const sub = await provisionPaystackSubaccount(result.merchantId);
       setBusyId(null);
       if (!sub.ok) {
-        toast.success('Organizer approved. Subaccount still needed.');
+        toast.success('Organizer approved. Their own Paystack subaccount is still needed.');
         toast.error(sub.message || 'Could not create Paystack subaccount');
+      } else if (sub.subaccount) {
+        toast.success(`Organizer approved. Subaccount ${sub.subaccount}`);
       } else {
-        toast.success(`Organizer approved. ${sub.message || 'Selling enabled.'}`);
+        toast.success('Organizer approved. Selling enabled.');
       }
+    } else if (status === 'approved' && result.paystackSubaccount) {
+      setBusyId(null);
+      toast.success(`Organizer approved. Subaccount ${result.paystackSubaccount}`);
     } else {
       setBusyId(null);
       toast.success(`Organizer ${organizerStatusLabel(status).toLowerCase()}`);

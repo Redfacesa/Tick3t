@@ -22,6 +22,11 @@ import {
   upsertTick3tStaff,
   upsertTick3tTicketType,
 } from '@/lib/tick3t/api';
+import {
+  fetchTick3tMerchantCommerceStatus,
+  provisionTick3tMerchantSubaccount,
+  type Tick3tCommerceStatus,
+} from '@/lib/tick3t/provision';
 import type {
   Tick3tEvent,
   Tick3tOrganizer,
@@ -132,6 +137,8 @@ export default function Tick3tOrganizerDashboard() {
     event_id: '',
     max_redemptions: '',
   });
+  const [commerce, setCommerce] = useState<Tick3tCommerceStatus | null>(null);
+  const [provisionBusy, setProvisionBusy] = useState(false);
 
   const setTab = (id: Tab) => {
     const next = new URLSearchParams(sp);
@@ -143,13 +150,14 @@ export default function Tick3tOrganizerDashboard() {
     const me = await fetchTick3tOrganizerMe();
     setOrganizer(me);
     if (me?.merchant_id && me.status === 'approved') {
-      const [ev, tk, st, sf, pr, rf] = await Promise.all([
+      const [ev, tk, st, sf, pr, rf, commerceStatus] = await Promise.all([
         fetchTick3tEvents(me.merchant_id),
         fetchTick3tTickets(me.merchant_id),
         fetchTick3tStats(me.merchant_id),
         fetchTick3tStaff(me.merchant_id),
         fetchTick3tPromos(me.merchant_id),
         fetchTick3tRefunds(me.merchant_id),
+        fetchTick3tMerchantCommerceStatus(me.merchant_id),
       ]);
       setEvents(ev);
       setTickets(tk);
@@ -157,6 +165,7 @@ export default function Tick3tOrganizerDashboard() {
       setStaff(sf);
       setPromos(pr);
       setRefunds(rf);
+      setCommerce(commerceStatus);
       const selectedEventId = ticketForm.event_id || ev[0]?.id || '';
       if (selectedEventId) {
         setTicketForm((f) => ({ ...f, event_id: f.event_id || selectedEventId }));
@@ -167,6 +176,7 @@ export default function Tick3tOrganizerDashboard() {
       }
     } else {
       setEvents([]);
+      setCommerce(null);
       setTickets([]);
       setStats(null);
       setStaff([]);
@@ -1017,6 +1027,47 @@ export default function Tick3tOrganizerDashboard() {
 
             {tab === 'finance' && (
               <section className="space-y-4">
+                <div className="rounded-2xl border border-black/10 bg-mist p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                    Payout readiness
+                  </p>
+                  <p className="mt-2 text-sm text-ink">
+                    {commerce?.is_platform_merchant
+                      ? 'Platform merchant — settlements use the main Paystack account.'
+                      : commerce?.can_receive_payouts
+                        ? `Ready · ${commerce.paystack_subaccount}`
+                        : commerce?.bank_complete
+                          ? 'Bank on file — create your Paystack subaccount to receive ticket payouts.'
+                          : 'Add bank details in RedFace Pay / organizer registration to enable payouts.'}
+                  </p>
+                  {organizer.merchant_id && commerce?.needs_subaccount && (
+                    <button
+                      type="button"
+                      disabled={provisionBusy}
+                      onClick={() => {
+                        void (async () => {
+                          if (!organizer.merchant_id) return;
+                          setProvisionBusy(true);
+                          const sub = await provisionTick3tMerchantSubaccount(organizer.merchant_id);
+                          setProvisionBusy(false);
+                          if (!sub.ok) {
+                            toast.error(sub.message || 'Could not enable payouts');
+                            return;
+                          }
+                          toast.success(
+                            sub.subaccount
+                              ? `Payouts enabled · ${sub.subaccount}`
+                              : 'Payouts enabled',
+                          );
+                          await reload();
+                        })();
+                      }}
+                      className="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+                    >
+                      {provisionBusy ? 'Enabling…' : 'Enable payouts'}
+                    </button>
+                  )}
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {[
                     { label: 'Gross ticket sales', value: fmtMoney(gross) },
