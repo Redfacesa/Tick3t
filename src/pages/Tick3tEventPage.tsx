@@ -334,11 +334,62 @@ export default function Tick3tEventPage() {
           )}
         </section>
 
-        {(event.terms || event.refund_policy || event.age_restriction) && (
-          <section className="space-y-2 text-xs text-ink/40">
-            {event.age_restriction && <p>Age: {event.age_restriction}</p>}
-            {event.terms && <p>Terms: {event.terms}</p>}
-            {event.refund_policy && <p>Refunds: {event.refund_policy}</p>}
+        {(event.terms ||
+          event.refund_policy ||
+          event.age_restriction ||
+          event.maps_url ||
+          event.contact_email ||
+          event.contact_phone ||
+          event.website_url ||
+          event.instagram_url ||
+          event.facebook_url) && (
+          <section className="space-y-4 rounded-2xl border border-black/10 bg-mist p-5">
+            <h2 className="text-sm font-bold">Details</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              {event.maps_url && (
+                <a href={event.maps_url} target="_blank" rel="noreferrer" className="font-semibold text-brand">
+                  Open map
+                </a>
+              )}
+              {event.website_url && (
+                <a href={event.website_url} target="_blank" rel="noreferrer" className="font-semibold text-brand">
+                  Website
+                </a>
+              )}
+              {event.instagram_url && (
+                <a href={event.instagram_url} target="_blank" rel="noreferrer" className="font-semibold text-brand">
+                  Instagram
+                </a>
+              )}
+              {event.facebook_url && (
+                <a href={event.facebook_url} target="_blank" rel="noreferrer" className="font-semibold text-brand">
+                  Facebook
+                </a>
+              )}
+            </div>
+            <div className="space-y-1 text-sm text-ink/60">
+              {event.contact_email && (
+                <p>
+                  Email{' '}
+                  <a className="font-semibold text-brand" href={`mailto:${event.contact_email}`}>
+                    {event.contact_email}
+                  </a>
+                </p>
+              )}
+              {event.contact_phone && (
+                <p>
+                  Phone{' '}
+                  <a className="font-semibold text-brand" href={`tel:${event.contact_phone}`}>
+                    {event.contact_phone}
+                  </a>
+                </p>
+              )}
+            </div>
+            <div className="space-y-2 border-t border-black/10 pt-3 text-xs text-ink/40">
+              {event.age_restriction && <p>Age: {event.age_restriction}</p>}
+              {event.terms && <p className="whitespace-pre-wrap">Terms: {event.terms}</p>}
+              {event.refund_policy && <p className="whitespace-pre-wrap">Refunds: {event.refund_policy}</p>}
+            </div>
           </section>
         )}
       </div>
